@@ -14,14 +14,31 @@ export default function Chat() {
   const t = useT();
   const state = useChat();
   const ref = useRef<HTMLDivElement>(null);
+  const nearBottom = useRef(true);
 
+  const onScroll = () => {
+    const el = ref.current;
+    if (el) nearBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
+
+  // Follow new content only when the user is already at the bottom, so scrolling
+  // up to read isn't yanked back down by every streamed token.
   useEffect(() => {
     const el = ref.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (el && nearBottom.current) el.scrollTop = el.scrollHeight;
   }, [state.items]);
 
+  // A pending approval must show its Apply/Reject buttons — always reveal it.
+  useEffect(() => {
+    const el = ref.current;
+    if (el && state.pendingCardId != null) {
+      el.scrollTop = el.scrollHeight;
+      nearBottom.current = true;
+    }
+  }, [state.pendingCardId]);
+
   return (
-    <div className="chat" ref={ref}>
+    <div className="chat" ref={ref} onScroll={onScroll}>
       {state.items.map((it) => {
         switch (it.kind) {
           case "user":

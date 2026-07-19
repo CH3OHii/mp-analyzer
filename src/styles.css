@@ -103,8 +103,10 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .btn.small { padding: 2px 8px; font-size: 11px; }
 .btn:disabled { opacity: 0.5; cursor: default; }
 
-/* preview grid */
-.preview { overflow-x: auto; }
+/* preview grid — bounded height + internal scroll so a large before/after
+   preview never makes the pending card taller than the pane (which would push
+   the Apply/Reject buttons off the bottom) */
+.preview { overflow: auto; max-height: 160px; }
 .preview .grid-label { color: var(--text-dim); font-size: 11px; margin: 4px 0 2px; }
 .preview table { border-collapse: collapse; font-size: 11px; font-family: var(--mono); }
 .preview td { border: 1px solid var(--border); padding: 2px 6px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: var(--bg); }
