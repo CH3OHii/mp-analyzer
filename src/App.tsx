@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Chat from "./components/Chat";
 import Composer from "./components/Composer";
+import PendingBar from "./components/PendingBar";
 import PresetPicker from "./components/PresetPicker";
 import SettingsPanel from "./components/SettingsPanel";
 import StatusBar from "./components/StatusBar";
@@ -29,6 +30,7 @@ export default function App() {
       {pickerOpen && <PresetPicker onClose={() => setPickerOpen(false)} />}
       {!inExcel && <div className="notice">{t.browserPreviewNote}</div>}
       <Chat />
+      <PendingBar />
       <StatusBar />
       <Composer />
       {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}

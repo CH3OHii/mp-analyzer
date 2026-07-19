@@ -1,6 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./styles.css";
+import * as chatStore from "./store/chatStore";
+
+// Debug handle for driving the real store from devtools/tests (harmless in prod).
+(window as unknown as { __mp: unknown }).__mp = chatStore;
 
 function render() {
   createRoot(document.getElementById("root")!).render(<App />);
