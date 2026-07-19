@@ -2,7 +2,7 @@ import { useState } from "react";
 import { revertTop, useSnapshots } from "../excel/snapshot";
 import { useT } from "../i18n";
 import type { ToolCardModel } from "../store/chatStore";
-import { addError, markStepsReverted, resolveDecision } from "../store/chatStore";
+import { addError, markStepsReverted } from "../store/chatStore";
 import PendingChange from "./PendingChange";
 
 const ICON: Record<string, string> = {
@@ -23,8 +23,6 @@ export default function ToolCard({ card, isPendingActive }: { card: ToolCardMode
   const t = useT();
   const snaps = useSnapshots();
   const [open, setOpen] = useState(false);
-  const [reason, setReason] = useState("");
-  const [showReason, setShowReason] = useState(false);
   const [reverting, setReverting] = useState(false);
 
   const isTop = card.stepId != null && snaps.steps[snaps.steps.length - 1]?.id === card.stepId;
@@ -63,41 +61,13 @@ export default function ToolCard({ card, isPendingActive }: { card: ToolCardMode
         <span className={`status ${card.status}`}>{statusLabel[card.status] ?? card.status}</span>
       </div>
 
+      {/* Pending: the card shows CONTEXT (what will change); the decision
+          buttons live only in the pinned PendingBar above the composer. */}
       {card.status === "pending" && isPendingActive && (
         <div className="detail">
           <div className="hint">{t.pendingHint}</div>
           {card.mutating === "hard" && <div className="error-banner">{t.hardOpWarning}</div>}
           {card.preview && <PendingChange preview={card.preview} />}
-          <div className="actions">
-            <button className="btn primary" onClick={() => resolveDecision({ action: "apply" })}>
-              {t.apply}
-            </button>
-            {card.mutating !== "hard" && (
-              <button className="btn" onClick={() => resolveDecision({ action: "apply-turn" })}>
-                {t.applyTurn}
-              </button>
-            )}
-            {!showReason ? (
-              <button className="btn danger" onClick={() => setShowReason(true)}>
-                {t.reject}
-              </button>
-            ) : (
-              <>
-                <input
-                  autoFocus
-                  value={reason}
-                  placeholder={t.rejectReasonPlaceholder}
-                  onChange={(e) => setReason(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") resolveDecision({ action: "reject", reason: reason || undefined });
-                  }}
-                />
-                <button className="btn danger" onClick={() => resolveDecision({ action: "reject", reason: reason || undefined })}>
-                  {t.rejectSend}
-                </button>
-              </>
-            )}
-          </div>
         </div>
       )}
 
