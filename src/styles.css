@@ -62,6 +62,10 @@ body[data-in-office] .panel .head { padding-right: 48px; }
    content height, so long output grows the pane instead of scrolling and the
    composer gets clipped off the bottom. */
 .chat { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 10px 10px 16px; display: flex; flex-direction: column; gap: 10px; }
+/* Chat items are flex children — without this they SHRINK to fit the pane
+   instead of overflowing it: tool cards (overflow:hidden → min-size 0) squash
+   into 2px lines and scrolling never engages. Never compress chat content. */
+.chat > * { flex-shrink: 0; }
 .msg { max-width: 100%; line-height: 1.5; }
 .msg.user { align-self: flex-end; background: var(--navy); color: #fff; border-radius: 12px 12px 2px 12px; padding: 7px 11px; white-space: pre-wrap; max-width: 90%; }
 .msg.assistant { align-self: stretch; }
