@@ -1,0 +1,35 @@
+{
+  "name": "mp-analyzer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Claude-for-Excel-style AI copilot task pane for Excel (Win + Mac), powered by Chinese LLM providers",
+  "scripts": {
+    "certs": "office-addin-dev-certs install",
+    "predev": "office-addin-dev-certs install",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preserve": "office-addin-dev-certs install",
+    "serve": "vite preview --port 3000",
+    "sideload:mac": "bash scripts/sideload-mac.sh",
+    "proxy": "node proxy/cors-proxy.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.4",
+    "marked": "^15.0.7",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/office-js": "^1.0.377",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "office-addin-dev-certs": "^2.0.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}
