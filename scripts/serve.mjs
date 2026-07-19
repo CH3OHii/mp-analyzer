@@ -66,8 +66,18 @@ const certDir = join(homedir(), ".office-addin-dev-certs");
 const crt = join(certDir, "localhost.crt");
 const key = join(certDir, "localhost.key");
 const secure = existsSync(crt) && existsSync(key);
+if (!secure && process.env.ALLOW_HTTP !== "1") {
+  // Refuse to run rather than hold port 3000 with an http server Excel can't
+  // use — otherwise a later, cert-fixed relaunch would see "already running"
+  // and keep the broken one.
+  console.error(
+    "Dev certs missing — Excel requires https. Run `npm run certs` once, then relaunch.\n" +
+      "(Set ALLOW_HTTP=1 only for browser-only preview without Excel.)"
+  );
+  process.exit(1);
+}
 if (!secure) {
-  console.warn("WARNING: dev certs missing — serving plain http; Excel will refuse the pane. Run `npm run certs` once.");
+  console.warn("WARNING: serving plain http (ALLOW_HTTP=1) — Excel will refuse the pane.");
 }
 
 const server = secure
