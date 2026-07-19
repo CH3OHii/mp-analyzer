@@ -1,5 +1,6 @@
 node_modules/
 MP Analyzer.app/
+.sideloaded
 dist/
 .vite/
 .DS_Store

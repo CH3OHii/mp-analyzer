@@ -30,6 +30,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "office-addin-dev-certs": "^2.0.0",
+    "office-addin-dev-settings": "^3.1.2",
     "typescript": "^5.7.0",
     "vite": "^6.0.0",
     "vitest": "^3.0.0"

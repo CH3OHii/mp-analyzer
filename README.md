@@ -30,10 +30,20 @@ Then **fully quit Excel (⌘Q) and reopen it**. The **MP Analyzer** button appea
 the right end of the **Home** ribbon. Click it → the pane opens → gear icon →
 paste your API key(s).
 
-## One-time setup — Windows
+## One-time setup — Windows (no terminal needed)
+
+1. Install [Node.js](https://nodejs.org) (LTS) and git.
+2. Clone the repo (via git, NOT iCloud/OneDrive — node_modules and sync don't mix).
+3. Double-click **`Start MP Analyzer.vbs`**. On first run it bootstraps itself:
+   installs dependencies, installs the localhost certificate (click **Yes** on the
+   Windows "trust certificate?" dialog), and registers the add-in in the registry.
+   Then it starts the server and opens Excel.
+4. If Excel was already open, fully EXIT it (right-click taskbar icon → close all
+   windows) and reopen — registrations are only read at startup.
+
+Manual equivalent, if you prefer the terminal:
 
 ```powershell
-git clone <your-private-remote> mp-analyzer   # sync via git, NOT iCloud (node_modules)
 cd mp-analyzer
 npm install
 npx office-addin-dev-certs install
