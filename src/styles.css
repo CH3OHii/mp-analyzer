@@ -42,6 +42,8 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); background
    an Office host (not the exact platform string, which can be empty at load). */
 body[data-in-office] .topbar { padding-right: 48px; }
 body[data-in-office] .popover { right: 48px; }
+/* Settings/full-screen panels also put a ✕ at the top-right, under the ⓘ */
+body[data-in-office] .panel .head { padding-right: 48px; }
 .topbar .title { font-weight: 700; color: var(--navy); font-size: 14px; margin-right: auto; }
 .chip {
   border: 1px solid var(--border); background: var(--bg-alt); border-radius: 999px;
