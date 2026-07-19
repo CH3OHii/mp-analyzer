@@ -46,15 +46,26 @@ containing `manifest.xml`, add it under File → Options → Trust Center → Tr
 Add-in Catalogs (check "Show in Menu"), restart Excel, Insert → My Add-ins →
 Shared Folder.
 
-## Every work session
+## Every work session — no terminal needed
 
-```bash
-cd "/Users/a./Desktop/MP analyzer" && npm run dev
-```
+**Mac:** double-click **`MP Analyzer.app`** in the project folder. It silently starts
+the local server (building `dist/` automatically the first time) and brings Excel to
+the front — then just click the ribbon button. Drag the app to your Dock, or add it
+to System Settings → General → **Login Items** to make the server start at login.
+If you move the project folder, regenerate the app with `npm run launcher:mac`.
 
-Open Excel → click the ribbon button. That's it. (The `predev` hook silently renews
-the ~30-day localhost cert when needed.) Once you stop iterating on the code,
-`npm run build && npm run serve` serves the frozen production build instead.
+**Windows:** double-click **`Start MP Analyzer.vbs`** in the project folder — same
+behavior, no console window. For auto-start at login: Win+R → `shell:startup` →
+place a *shortcut* to the .vbs there.
+
+The launchers serve the frozen production build via `scripts/serve.mjs` (zero-dep,
+instant). Two things to know:
+- After pulling code changes, run `npm run build` once (or delete `dist/`) so the
+  launcher serves the new version.
+- For active development with hot reload, `npm run dev` in a terminal still works
+  and uses the same port — quit one before starting the other.
+- The localhost certificate expires roughly monthly; if the pane stops loading,
+  run `npm run certs` once and relaunch.
 
 ## API keys & CORS
 

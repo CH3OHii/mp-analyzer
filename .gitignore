@@ -1,4 +1,5 @@
 node_modules/
+MP Analyzer.app/
 dist/
 .vite/
 .DS_Store

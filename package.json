@@ -11,6 +11,8 @@
     "build": "tsc --noEmit && vite build",
     "preserve": "office-addin-dev-certs install",
     "serve": "vite preview --port 3000",
+    "start": "node scripts/serve.mjs",
+    "launcher:mac": "bash scripts/make-launcher-mac.sh",
     "sideload:mac": "bash scripts/sideload-mac.sh",
     "proxy": "node proxy/cors-proxy.mjs",
     "icons": "node scripts/make-icons.mjs",
