@@ -37,6 +37,10 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); background
   display: flex; align-items: center; gap: 6px;
   padding: 8px 10px; border-bottom: 1px solid var(--border); flex: none;
 }
+/* Excel for Mac overlays its ⓘ button on the pane's top-right corner —
+   keep our buttons clear of it */
+body[data-platform="Mac"] .topbar { padding-right: 46px; }
+body[data-platform="Mac"] .popover { right: 46px; }
 .topbar .title { font-weight: 700; color: var(--navy); font-size: 14px; margin-right: auto; }
 .chip {
   border: 1px solid var(--border); background: var(--bg-alt); border-radius: 999px;
