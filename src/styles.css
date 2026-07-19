@@ -37,10 +37,11 @@ body { font-family: var(--font); font-size: 13px; color: var(--text); background
   display: flex; align-items: center; gap: 6px;
   padding: 8px 10px; border-bottom: 1px solid var(--border); flex: none;
 }
-/* Excel for Mac overlays its ⓘ button on the pane's top-right corner —
-   keep our buttons clear of it */
-body[data-platform="Mac"] .topbar { padding-right: 46px; }
-body[data-platform="Mac"] .popover { right: 46px; }
+/* Excel floats its ⓘ personality-menu button over the pane's top-right corner
+   in every Office host — keep our controls clear of it. Keyed on being inside
+   an Office host (not the exact platform string, which can be empty at load). */
+body[data-in-office] .topbar { padding-right: 48px; }
+body[data-in-office] .popover { right: 48px; }
 .topbar .title { font-weight: 700; color: var(--navy); font-size: 14px; margin-right: auto; }
 .chip {
   border: 1px solid var(--border); background: var(--bg-alt); border-radius: 999px;

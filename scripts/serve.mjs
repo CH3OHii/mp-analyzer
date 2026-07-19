@@ -42,6 +42,7 @@ const MIME = {
 
 function handler(req, res) {
   const urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
+  console.log(`${new Date().toISOString()} ${req.method} ${urlPath} ua=${(req.headers["user-agent"] || "").slice(0, 60)}`);
   let file = normalize(join(DIST, urlPath));
   if (!file.startsWith(DIST)) {
     res.writeHead(403);
