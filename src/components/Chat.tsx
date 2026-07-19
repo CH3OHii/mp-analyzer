@@ -10,6 +10,24 @@ function Md({ text }: { text: string }) {
   return <div className="md" dangerouslySetInnerHTML={{ __html: html }} />;
 }
 
+// TEMP DOM diagnostic: reports what the chat's children actually are (tag,
+// class, height, text head) + scroll metrics to the local server log, so the
+// "renders as a thin line" bug can be identified from inside Excel. Remove after.
+let domDiagTimer: number | undefined;
+function beaconDom(el: HTMLDivElement) {
+  clearTimeout(domDiagTimer);
+  domDiagTimer = window.setTimeout(() => {
+    const kids = [...el.children].slice(-14).map((k) => {
+      const h = Math.round(k.getBoundingClientRect().height);
+      const cls = String((k as HTMLElement).className || "").split(" ").slice(0, 2).join("_");
+      const txt = (k.textContent || "").slice(0, 8).replace(/[^\w一-鿿]/g, "");
+      return `${k.tagName}.${cls}.h${h}.${txt}`;
+    });
+    const head = `sc${Math.round(el.scrollTop)}of${el.scrollHeight}win${el.clientHeight}`;
+    fetch("/__diag/dom/" + encodeURIComponent([head, ...kids].join("~"))).catch(() => {});
+  }, 800);
+}
+
 export default function Chat() {
   const t = useT();
   const state = useChat();
@@ -26,6 +44,7 @@ export default function Chat() {
   useEffect(() => {
     const el = ref.current;
     if (el && nearBottom.current) el.scrollTop = el.scrollHeight;
+    if (el) beaconDom(el);
   }, [state.items]);
 
   // A pending approval must show its Apply/Reject buttons — always reveal it.
