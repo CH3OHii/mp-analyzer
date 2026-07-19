@@ -20,7 +20,14 @@
 html, body, #root { height: 100%; margin: 0; }
 body { font-family: var(--font); font-size: 13px; color: var(--text); background: var(--bg); }
 
-.app { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+.app { display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative; }
+
+.actions input {
+  flex: 1; min-width: 120px; border: 1px solid var(--border); border-radius: 6px;
+  padding: 4px 8px; font-size: 12px; font-family: var(--font); outline: none;
+}
+.actions input:focus { border-color: var(--teal); }
+.row input[type="checkbox"], .toggle-row input[type="checkbox"] { accent-color: var(--teal); }
 
 .phase0 { padding: 24px; }
 .phase0 h1 { font-size: 18px; color: var(--navy); }

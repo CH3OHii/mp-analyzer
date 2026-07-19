@@ -1,11 +1,37 @@
+import { useState } from "react";
+import Chat from "./components/Chat";
+import Composer from "./components/Composer";
+import PresetPicker from "./components/PresetPicker";
+import SettingsPanel from "./components/SettingsPanel";
+import StatusBar from "./components/StatusBar";
+import TopBar from "./components/TopBar";
+import { apiSupported, hasExcel } from "./excel/env";
+import { useT } from "./i18n";
+
 export default function App() {
-  const inExcel = typeof Excel !== "undefined" && typeof Office !== "undefined" && !!Office.context;
+  const t = useT();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const inExcel = hasExcel();
+
+  if (inExcel && !apiSupported()) {
+    return (
+      <div className="blocking">
+        <h2>{t.unsupportedTitle}</h2>
+        <p>{t.unsupportedBody}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
-      <div className="phase0">
-        <h1>MP Analyzer</h1>
-        <p>{inExcel ? "Task pane loaded inside Excel ✓" : "Running outside Excel (browser preview)"}</p>
-      </div>
+      <TopBar onSettings={() => setSettingsOpen(true)} onPicker={() => setPickerOpen((v) => !v)} />
+      {pickerOpen && <PresetPicker onClose={() => setPickerOpen(false)} />}
+      {!inExcel && <div className="notice">{t.browserPreviewNote}</div>}
+      <Chat />
+      <StatusBar />
+      <Composer />
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
