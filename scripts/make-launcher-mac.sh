@@ -8,6 +8,9 @@ APP="$DIR/MP Analyzer.app"
 TMP_SCRIPT="$(mktemp /tmp/mp-launcher-XXXXXX).applescript"
 
 cat > "$TMP_SCRIPT" <<EOF
+-- re-sideload every launch (idempotent file copy) so the ribbon button can never
+-- be missing because the one-time registration was skipped
+do shell script "mkdir -p \"\$HOME/Library/Containers/com.microsoft.Excel/Data/Documents/wef\" && cp " & quoted form of "$DIR/manifest.xml" & " \"\$HOME/Library/Containers/com.microsoft.Excel/Data/Documents/wef/mp-analyzer-manifest.xml\""
 do shell script "cd " & quoted form of "$DIR" & " && (nohup node scripts/serve.mjs > /tmp/mp-analyzer-server.log 2>&1 &) ; sleep 1"
 tell application "Microsoft Excel" to activate
 display notification "Server running on https://localhost:3000" with title "MP Analyzer"
