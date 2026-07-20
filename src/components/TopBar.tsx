@@ -1,3 +1,4 @@
+import { Palette, Plus, Settings } from "lucide-react";
 import { resolveAnalysisPresets } from "../agent/presets";
 import { useT } from "../i18n";
 import { resetChat } from "../store/chatStore";
@@ -13,8 +14,8 @@ export default function TopBar({ onSettings, onPicker }: { onSettings: () => voi
     <div className="topbar">
       <span className="title">{t.appTitle}</span>
       <button className={`chip ${active || s.styleLayerOn ? "active" : ""}`} onClick={onPicker} title={t.presets}>
-        {label}
-        {s.styleLayerOn ? " +🎨" : ""}
+        <span className="chip-text">{label}</span>
+        {s.styleLayerOn && <Palette size={12} />}
       </button>
       <button
         className="iconbtn"
@@ -24,10 +25,10 @@ export default function TopBar({ onSettings, onPicker }: { onSettings: () => voi
         {s.language === "zh" ? "EN" : "中"}
       </button>
       <button className="iconbtn" title={t.newChat} onClick={resetChat}>
-        ✚
+        <Plus size={16} />
       </button>
       <button className="iconbtn" title={t.settings} onClick={onSettings}>
-        ⚙
+        <Settings size={16} />
       </button>
     </div>
   );

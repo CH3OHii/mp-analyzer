@@ -54,7 +54,16 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .iconbtn {
   border: none; background: none; cursor: pointer; font-size: 15px; line-height: 1;
   padding: 4px 6px; border-radius: 6px; color: var(--text-dim);
+  display: inline-flex; align-items: center; justify-content: center;
 }
+/* lucide icons: align + never shrink in flex rows */
+.chip { display: inline-flex; align-items: center; gap: 4px; }
+.chip-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chip svg, .toolcard .head svg, .pb-label svg, .btn svg { flex: none; vertical-align: middle; }
+.ticon { color: var(--navy); }
+.pb-label { display: inline-flex; align-items: center; gap: 5px; }
+.pb-warn { color: var(--danger); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
 .iconbtn:hover { background: var(--bg-alt); }
 
 /* ---------- chat ---------- */

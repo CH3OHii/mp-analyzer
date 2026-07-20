@@ -1,3 +1,4 @@
+import { Pause, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../i18n";
 import { resolveDecision, useChat, type ToolCardModel } from "../store/chatStore";
@@ -18,7 +19,8 @@ function Inner({ card }: { card: ToolCardModel }) {
   return (
     <div className="pendingbar">
       <span className="pb-label" title={t.pendingHint}>
-        {card.mutating === "hard" ? "⚠️" : "⏸"} {card.name}
+        {card.mutating === "hard" ? <TriangleAlert size={14} className="pb-warn" /> : <Pause size={14} />}
+        {" "}{card.name}
         {card.target ? ` → ${card.target}` : ""}
       </span>
       <button className="btn primary small" onClick={() => resolveDecision({ action: "apply" })}>

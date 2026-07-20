@@ -1,3 +1,4 @@
+import { Eye, EyeOff, Pencil, X } from "lucide-react";
 import { useState } from "react";
 import { useT } from "../i18n";
 import { testConnection } from "../llm/client";
@@ -68,7 +69,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
       <div className="head">
         {t.settings}
         <button className="iconbtn" onClick={onClose} title={t.close}>
-          ✕
+          <X size={16} />
         </button>
       </div>
       <div className="body">
@@ -160,7 +161,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               autoComplete="off"
             />
             <button className="btn small" onClick={() => setShowKey((v) => !v)}>
-              {showKey ? "🙈" : "👁"}
+              {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
           </div>
           <div className="hint">{t.apiKeyHint}</div>
@@ -224,7 +225,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               {p.nameZh || p.nameEn} <span className="hint">({(p.body.length / 1000).toFixed(1)}k chars)</span>
             </span>
             <button className="btn small" onClick={() => setEditing({ ...p })}>
-              ✎
+              <Pencil size={13} />
             </button>
             <button
               className="btn small danger"

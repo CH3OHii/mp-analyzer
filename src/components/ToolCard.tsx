@@ -1,3 +1,18 @@
+import {
+  ArrowUpDown,
+  ChartColumn,
+  Crosshair,
+  Eye,
+  Layers,
+  Map,
+  Paintbrush,
+  Pencil,
+  Search,
+  Sigma,
+  Thermometer,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { useState } from "react";
 import { revertTop, useSnapshots } from "../excel/snapshot";
 import { useT } from "../i18n";
@@ -5,18 +20,18 @@ import type { ToolCardModel } from "../store/chatStore";
 import { addError, markStepsReverted } from "../store/chatStore";
 import PendingChange from "./PendingChange";
 
-const ICON: Record<string, string> = {
-  get_workbook_overview: "🗺️",
-  read_range: "👁️",
-  get_selection: "🎯",
-  find: "🔎",
-  write_range: "✏️",
-  set_formulas: "ƒx",
-  format_range: "🎨",
-  conditional_formatting: "🌡️",
-  create_chart: "📊",
-  manage_sheet: "🗂️",
-  insert_delete: "↕️",
+const ICON: Record<string, LucideIcon> = {
+  get_workbook_overview: Map,
+  read_range: Eye,
+  get_selection: Crosshair,
+  find: Search,
+  write_range: Pencil,
+  set_formulas: Sigma,
+  format_range: Paintbrush,
+  conditional_formatting: Thermometer,
+  create_chart: ChartColumn,
+  manage_sheet: Layers,
+  insert_delete: ArrowUpDown,
 };
 
 export default function ToolCard({ card, isPendingActive }: { card: ToolCardModel; isPendingActive: boolean }) {
@@ -25,6 +40,7 @@ export default function ToolCard({ card, isPendingActive }: { card: ToolCardMode
   const [open, setOpen] = useState(false);
   const [reverting, setReverting] = useState(false);
 
+  const Icon = ICON[card.name] ?? Wrench;
   const isTop = card.stepId != null && snaps.steps[snaps.steps.length - 1]?.id === card.stepId;
   const statusLabel: Record<string, string> = {
     pending: t.statusPending,
@@ -52,7 +68,7 @@ export default function ToolCard({ card, isPendingActive }: { card: ToolCardMode
   return (
     <div className="toolcard">
       <div className="head" onClick={() => setOpen((v) => !v)}>
-        <span>{ICON[card.name] ?? "🔧"}</span>
+        <Icon size={14} className="ticon" />
         <span className="name">{card.name}</span>
         <span className="target">
           {card.target ?? ""}
