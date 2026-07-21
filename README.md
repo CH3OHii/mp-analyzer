@@ -10,11 +10,11 @@ scenario tables, formatting, conditional formats, charts. Every mutation is
 one-click revert** — programmatic edits bypass Excel's own Ctrl+Z, so the add-in
 brings its own undo stack.
 
-Built-in analysis skills (selectable in the preset picker):
-
-- **NEV月度销量诊断** — NEV sales attribution / decomposition framework
-- **商业分析框架** — general business-analysis framework
-- **报表美化** toggle — excel-generator styling rules applied live in the workbook
+**Analysis skills are yours to supply.** Drop any `*.md` framework into `skills/` and it
+becomes a selectable preset in the pane (bundled at build time); or paste one into
+**Settings → Custom analysis presets** for no-rebuild use. The folder ships empty and is
+gitignored, so private methodology never lands in the repo — see
+[skills/README.md](skills/README.md).
 
 ### Verification pipeline
 
@@ -238,7 +238,7 @@ not heal, and restoring a deleted sheet loses rich styling beyond number formats
 | **Auto-apply changes** | Skip approval for normal writes; destructive ops still ask |
 | **Max agent steps per turn** | Default 15; raise for long multi-step builds |
 | **Context budget (tokens)** | Default 32000; old tool results are elided before whole exchanges are dropped |
-| **Analysis skill** | Injects one of the bundled `skills/*.md` frameworks into the system prompt |
+| **Analysis skill** | Injects a `skills/*.md` framework, or one of your custom presets, into the system prompt |
 
 **API keys** are stored per-provider in the pane's **localStorage only**. They are never
 written into the repo and never into workbook files — a deliberate choice, because
@@ -281,7 +281,7 @@ src/agent      — agent loop (stream → tools → approval → verify), audit,
                  system prompt, presets, history trimming
 src/store      — settings (localStorage) + chat store (approval gating lives here)
 src/components — task-pane UI (React 19, no UI framework)
-skills/        — SKILL.md frameworks, bundled verbatim at build time (?raw imports)
+skills/        — your own SKILL.md frameworks, bundled at build time (gitignored)
 proxy/         — optional zero-dep CORS fallback proxy
 docs/          — CORS matrix + manual E2E checklist
 ```

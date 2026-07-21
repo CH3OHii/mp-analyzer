@@ -11,10 +11,13 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
 1. ★ **Overview (ZH)** — ask 这个工作簿里有什么？ → correct sheet names, shapes, headers.
 2. ★ **Penetration column** — "add a monthly NEV penetration column, format 0.0%" →
    real formulas (`=NEV/PV` style), not pasted constants; preview shown before write.
-3. **NEV preset decomposition** — with NEV诊断 preset: YoY decomposition into a new
-   归因 sheet, Layer-1 market/share split as formulas, ZH labels.
-4. **Scenario grid** — 3-scenario 2026 penetration sensitivity table; with style layer
-   on, input cells visibly highlighted per the excel-report-style conventions.
+3. **Analysis preset** — with a `skills/*.md` framework selected in the picker (or a
+   custom preset pasted in Settings): the framework's structure visibly drives the
+   output — e.g. a decomposition written into a new sheet as formulas, with ZH labels.
+   Also verify the picker degrades cleanly when `skills/` is empty (shows None + custom
+   presets only, and the styling toggle is hidden).
+4. **Scenario grid** — 3-scenario penetration sensitivity table; with a styling skill
+   present and its layer toggled on, input cells are visibly highlighted per its rules.
 5. ★ **Cleaning + revert** — "find and fix numbers stored as text" → fixes applied;
    Revert restores the dirty state *exactly* (text-number back as text).
 6. ★ **Chart + revert** — "line chart of NEV零售" → chart appears; Revert deletes it.

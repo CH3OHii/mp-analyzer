@@ -46,7 +46,7 @@ export function composeSystemPrompt(s: AppSettings): string {
     if (analysis.adaptationNote) out += analysis.adaptationNote + "\n\n";
     out += analysis.body;
   }
-  if (s.styleLayerOn) {
+  if (s.styleLayerOn && styleLayerPreset) {
     out += `\n\n# Report styling layer\n${styleLayerPreset.adaptationNote}\n\n${styleLayerPreset.body}`;
   }
   return out;

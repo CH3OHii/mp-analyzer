@@ -24,15 +24,17 @@ export default function PresetPicker({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       ))}
-      <label className="toggle-row">
-        <input
-          type="checkbox"
-          checked={s.styleLayerOn}
-          onChange={(e) => updateSettings({ styleLayerOn: e.target.checked })}
-        />
-        {t.styleLayer}
-        <span className="sub">~{(styleLayerPreset.approxTokens / 1000).toFixed(1)}k</span>
-      </label>
+      {styleLayerPreset && (
+        <label className="toggle-row">
+          <input
+            type="checkbox"
+            checked={s.styleLayerOn}
+            onChange={(e) => updateSettings({ styleLayerOn: e.target.checked })}
+          />
+          {t.styleLayer}
+          <span className="sub">~{(styleLayerPreset.approxTokens / 1000).toFixed(1)}k</span>
+        </label>
+      )}
     </div>
   );
 }

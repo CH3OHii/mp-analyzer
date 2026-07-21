@@ -1,4 +1,9 @@
 node_modules/
+# Analysis skills are personal/proprietary — bundled locally at build time,
+# never committed. See skills/README.md.
+skills/*.md
+!skills/README.md
+.claude/
 MP Analyzer.app/
 .sideloaded
 dist/
