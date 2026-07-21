@@ -1,138 +1,340 @@
 # MP Analyzer
 
-A "Claude for Excel"-style AI copilot that lives in a task pane inside desktop Excel
+A "Claude for Excel"-style AI copilot that lives in a task pane inside **desktop Excel**
 (Windows **and** Mac), powered by Chinese LLM providers — DeepSeek, Kimi (Moonshot),
-GLM (Zhipu), Qwen (DashScope), MiniMax — via their OpenAI-compatible APIs.
+GLM (Zhipu), Qwen (DashScope), MiniMax — through their OpenAI-compatible APIs.
 
 The agent **reads and edits the open workbook**: values, formulas, model scaffolds,
 scenario tables, formatting, conditional formats, charts. Every mutation is
-**previewed before applying** (unless you enable auto-apply) and **snapshotted for
-one-click revert** — programmatic edits bypass Excel's own Ctrl+Z.
+**previewed before it is applied**, **verified after it lands**, and **snapshotted for
+one-click revert** — programmatic edits bypass Excel's own Ctrl+Z, so the add-in
+brings its own undo stack.
 
 Built-in analysis skills (selectable in the preset picker):
-- **NEV月度销量诊断** — the NEV sales attribution/decomposition framework
-- **商业分析框架** — the business-analysis framework
+
+- **NEV月度销量诊断** — NEV sales attribution / decomposition framework
+- **商业分析框架** — general business-analysis framework
 - **报表美化** toggle — excel-generator styling rules applied live in the workbook
+
+### Verification pipeline
+
+The agent does not just claim it wrote something — it checks:
+
+| Layer | What it does | Cost |
+| --- | --- | --- |
+| **Read-back** | After every write, re-reads the range and reports what actually landed, including `#NAME?` / `#REF!` / `#VALUE!` and 14 other Excel error literals | Free (same Excel batch) |
+| **Turn-end audit** | When the agent finishes, re-scans every range it wrote this turn for error cells and empty results; hands problems back for a bounded repair round | Free (local reads) |
+| **AI review** | One extra temperature-0 model call reviews *your request* against *what was actually done*, and flags results that are wrong rather than merely broken | ~1 small call per editing turn |
+
+Controlled by **Settings → Result verification**: `Off` / `Basic` (read-back + audit) /
+`Full` (adds the AI review, **default**).
 
 ---
 
-## One-time setup — Mac (this machine)
+## Requirements
+
+| | Minimum |
+| --- | --- |
+| **Excel** | Microsoft 365 **desktop** Excel (Windows or Mac) with ExcelApi 1.9+. Excel 2019/2021 perpetual and Excel on the web are not supported. |
+| **Node.js** | 18 LTS or newer — [nodejs.org](https://nodejs.org) |
+| **Git** | Any recent version |
+| **An API key** | From at least one of: DeepSeek, Moonshot/Kimi, Zhipu/GLM, DashScope/Qwen, MiniMax |
+
+Everything runs locally on your machine. There is no backend, no telemetry, and the
+add-in only talks to the LLM provider you select.
+
+> **Port 3000 is fixed.** `manifest.xml` points Excel at `https://localhost:3000`.
+> If something else on your machine owns that port, stop it before launching.
+
+> **Do not put the project inside iCloud Drive, OneDrive, or Dropbox.** `node_modules`
+> and file-sync clients corrupt each other. Use a plain local folder.
+
+---
+
+## Mac — step by step
+
+### One-time setup
+
+**1. Clone the repo** (plain local path, e.g. your Desktop or `~/dev`):
 
 ```bash
-cd "/Users/a./Desktop/MP analyzer"
-npm install
-npm run certs          # installs the Office dev localhost certificate (asks for admin password once)
-npm run sideload:mac   # copies manifest.xml into Excel's wef folder
-npm run dev            # starts https://localhost:3000
+cd ~/Desktop
+git clone https://github.com/CH3OHii/mp-analyzer.git "MP Analyzer"
+cd "MP Analyzer"
 ```
 
-Then **fully quit Excel (⌘Q) and reopen it**. The **MP Analyzer** button appears at
-the right end of the **Home** ribbon. Click it → the pane opens → gear icon →
-paste your API key(s).
+**2. Install dependencies:**
 
-## One-time setup — Windows (no terminal needed)
+```bash
+npm install
+```
 
-1. Install [Node.js](https://nodejs.org) (LTS) and git.
-2. Clone the repo (via git, NOT iCloud/OneDrive — node_modules and sync don't mix).
-3. Double-click **`Start MP Analyzer.vbs`**. On first run it bootstraps itself:
-   installs dependencies, installs the localhost certificate (click **Yes** on the
-   Windows "trust certificate?" dialog), and registers the add-in in the registry.
-   Then it starts the server and opens Excel.
-4. If Excel was already open, fully EXIT it (right-click taskbar icon → close all
-   windows) and reopen — registrations are only read at startup.
+**3. Install the local HTTPS certificate.** Office refuses to load a task pane over
+plain HTTP, so a trusted `localhost` certificate is required:
 
-Manual equivalent, if you prefer the terminal:
+```bash
+npm run certs
+```
+
+macOS will prompt for your **admin password** to add the certificate to the keychain.
+This is the standard Microsoft `office-addin-dev-certs` tool.
+
+**4. Register the add-in with Excel** (copies `manifest.xml` into Excel's `wef` folder):
+
+```bash
+npm run sideload:mac
+```
+
+**5. Fully quit Excel with ⌘Q and reopen it.** This matters — Excel only reads add-in
+registrations at startup, and closing the window is not the same as quitting.
+
+**6. Start the server and open the pane:**
+
+```bash
+npm run dev
+```
+
+In Excel, look at the **right end of the Home ribbon** for the **MP Analyzer** button.
+Click it and the task pane opens on the right.
+
+**7. Add your API key:** click the **gear icon** in the pane → pick your **Provider** →
+paste the **API key** → the key is saved per-provider in the pane's local storage.
+Click **Test connection** to confirm it works.
+
+You are done. Ask it something in the pane, e.g. `这个工作簿里有什么？`
+
+### Daily use (no terminal)
+
+Double-click **`MP Analyzer.app`** in the project folder. It silently starts the local
+server (building `dist/` automatically on first use) and brings Excel to the front —
+then just click the ribbon button.
+
+- Drag the app to your **Dock** for quick access.
+- To start it automatically at login: **System Settings → General → Login Items → +**
+  and select `MP Analyzer.app`.
+- If you **move the project folder**, regenerate the launcher: `npm run launcher:mac`.
+
+The launcher serves the frozen production build (instant, zero dependencies). For
+active development with hot reload use `npm run dev` instead — both use port 3000, so
+quit one before starting the other.
+
+### Updating on Mac
+
+```bash
+cd "~/Desktop/MP Analyzer"
+git pull
+npm install          # only if package.json changed
+npm run build        # so the .app launcher serves the new version
+```
+
+If `manifest.xml` changed, also rerun `npm run sideload:mac` and restart Excel with ⌘Q.
+
+---
+
+## Windows — step by step
+
+The Windows path is designed so you **never need a terminal**. A single `.vbs`
+launcher bootstraps everything on first run.
+
+### One-time setup
+
+**1. Install prerequisites:**
+
+- [Node.js LTS](https://nodejs.org) — accept the defaults
+- [Git for Windows](https://git-scm.com/download/win) — accept the defaults
+
+**2. Clone the repo** to a plain local folder (Command Prompt or PowerShell, once):
 
 ```powershell
-cd mp-analyzer
+cd %USERPROFILE%\Documents
+git clone https://github.com/CH3OHii/mp-analyzer.git "MP Analyzer"
+```
+
+Again: **not** inside OneDrive. If your Documents folder is OneDrive-synced, use
+`C:\dev\MP Analyzer` instead.
+
+**3. Double-click `Start MP Analyzer.vbs`** in the project folder.
+
+On the **first run only**, a console window appears and it bootstraps itself:
+
+1. `npm install` — installs dependencies (takes a minute)
+2. Installs the localhost certificate — **Windows shows a "Do you want to install this
+   certificate?" dialog. Click Yes.** The pane will not load if you decline.
+3. Registers the add-in in the Windows registry so the ribbon button appears
+
+Then it starts the server hidden and launches Excel.
+
+**4. If Excel was already running, fully EXIT it** — right-click the Excel taskbar icon
+→ close all windows — **and reopen.** Registrations are only read at startup.
+
+**5. Click the MP Analyzer button** at the right end of the **Home** ribbon, then the
+**gear icon** → select your **Provider** → paste your **API key** → **Test connection**.
+
+### Daily use
+
+Double-click **`Start MP Analyzer.vbs`**. No console window appears after the first
+run — it starts the server silently and opens Excel.
+
+To start it automatically at login: press **Win+R**, type `shell:startup`, press Enter,
+and place a **shortcut** to the `.vbs` file in that folder (a shortcut, not a copy).
+
+### Manual setup, if you prefer the terminal
+
+```powershell
+cd "MP Analyzer"
 npm install
 npx office-addin-dev-certs install
 npx office-addin-dev-settings sideload manifest.xml
 npm run dev
 ```
 
-If the registry sideload misbehaves, use the classic fallback: share a folder
-containing `manifest.xml`, add it under File → Options → Trust Center → Trusted
-Add-in Catalogs (check "Show in Menu"), restart Excel, Insert → My Add-ins →
-Shared Folder.
+If the registry-based sideload misbehaves, use the classic shared-folder fallback:
 
-## Every work session — no terminal needed
+1. Put `manifest.xml` in a folder and share it (right-click → Properties → Sharing).
+2. Excel → **File → Options → Trust Center → Trust Center Settings → Trusted Add-in
+   Catalogs** → paste the share path (`\\MACHINE\share`) → **Add catalog** → tick
+   **Show in Menu** → OK.
+3. Restart Excel → **Insert → My Add-ins → Shared Folder** → MP Analyzer.
 
-**Mac:** double-click **`MP Analyzer.app`** in the project folder. It silently starts
-the local server (building `dist/` automatically the first time) and brings Excel to
-the front — then just click the ribbon button. Drag the app to your Dock, or add it
-to System Settings → General → **Login Items** to make the server start at login.
-If you move the project folder, regenerate the app with `npm run launcher:mac`.
+### Updating on Windows
 
-**Windows:** double-click **`Start MP Analyzer.vbs`** in the project folder — same
-behavior, no console window. For auto-start at login: Win+R → `shell:startup` →
-place a *shortcut* to the .vbs there.
+```powershell
+cd "MP Analyzer"
+git pull
+npm install
+npm run build
+```
 
-The launchers serve the frozen production build via `scripts/serve.mjs` (zero-dep,
-instant). Two things to know:
-- After pulling code changes, run `npm run build` once (or delete `dist/`) so the
-  launcher serves the new version.
-- For active development with hot reload, `npm run dev` in a terminal still works
-  and uses the same port — quit one before starting the other.
-- The localhost certificate expires roughly monthly; if the pane stops loading,
-  run `npm run certs` once and relaunch.
+Then relaunch the `.vbs`. If `manifest.xml` changed, delete the `.sideloaded` marker
+file in the project folder before relaunching so it re-registers, and fully exit Excel.
 
-## API keys & CORS
+---
 
-- Keys are entered in **Settings** in the pane, stored per-provider in the pane's
-  localStorage only, and sent only to the provider you selected. They are **never**
-  written to the repo or into workbook files.
-- 2026-07-19 reference test: all five providers returned readable responses to
-  cross-origin browser calls (permissive CORS) — direct calls should just work.
-  Confirm inside Excel via **Settings → Run CORS diagnostics** and record results
-  in [docs/cors-matrix.md](docs/cors-matrix.md).
-- If a provider ever blocks direct calls: `npm run proxy` (a ~100-line local HTTPS
-  forwarder, host-whitelisted, binds 127.0.0.1) and flip **Use proxy** in Settings.
+## Using the pane
+
+**Ask in Chinese or English** — the agent replies in the language you write in.
+
+**Approval flow.** When the agent wants to change the workbook, a pinned bar appears
+above the composer with a before/after preview:
+
+- **Apply** — apply this one change
+- **Apply rest of turn** — stop asking for the remainder of this request
+- **Reject** — optionally give a reason, which is fed back to the model so its next
+  attempt takes your objection into account
+
+Destructive operations (sheet delete/clear, row/column delete) **always** ask, even
+with auto-apply enabled.
+
+**Revert.** Every applied step is snapshotted. Use **Revert** on the most recent tool
+card, or **Revert all** in the status bar. Honest limits: revert restores contents and
+number formats, but `#REF!` errors that a structural delete created in *other* cells do
+not heal, and restoring a deleted sheet loses rich styling beyond number formats.
+
+**Settings worth knowing:**
+
+| Setting | Meaning |
+| --- | --- |
+| **Result verification** | `Off` / `Basic` / `Full` (default) — see the table at the top |
+| **Auto-apply changes** | Skip approval for normal writes; destructive ops still ask |
+| **Max agent steps per turn** | Default 15; raise for long multi-step builds |
+| **Context budget (tokens)** | Default 32000; old tool results are elided before whole exchanges are dropped |
+| **Analysis skill** | Injects one of the bundled `skills/*.md` frameworks into the system prompt |
+
+**API keys** are stored per-provider in the pane's **localStorage only**. They are never
+written into the repo and never into workbook files — a deliberate choice, because
+`Office.context.document.settings` travels inside shared `.xlsx` files and would leak
+your key to anyone you send the workbook to.
+
+---
 
 ## Safety model
 
-- **Preview-first**: mutating tool calls pause with a before/after preview; Apply /
-  Apply-rest-of-turn / Reject-with-reason (the reason is fed back to the model).
-- **Hard ops** (sheet delete/clear, row/col delete) always ask, even in auto-apply.
-- **Revert**: each applied step snapshots the overwritten formulas + number formats
-  (and cell formats for formatting ops). LIFO revert per step, or Revert-all in the
-  status bar. Honest limits: revert restores content, but `#REF!` errors created in
-  *other* cells by a structural delete don't heal, and sheet restore loses rich
-  styling beyond number formats.
-- Caps: reads clipped at 5k cells/call (paginated), writes/snapshots at 10k/20k
-  cells, tool results at 12k chars — the model is told to split bigger work.
+- **Preview-first** — mutating calls pause with a before/after grid before applying.
+- **Validated before you are asked** — ragged data, malformed rules, and unknown sheet
+  names are rejected with a corrective message *before* the approval prompt, so you are
+  never asked to approve a call that was always going to fail.
+- **Preconditions** — the agent can anchor a write to cells it previously read; if the
+  sheet drifted underneath it, the write is refused rather than misapplied.
+- **Verified after** — see the verification pipeline above.
+- **Bounded** — reads clipped at 5k cells per call (paginated), writes/snapshots at
+  10k/20k cells, tool results at 12k chars, repair rounds structurally capped.
+
+---
 
 ## Development
 
 ```bash
-npm test         # 50 unit tests: SSE parser, JSON repair, A1 guards, history trim, snapshot stack
-npm run build    # tsc + vite production build
-npm run icons    # regenerate ribbon icons (replace assets/*.png with real art anytime)
+npm test         # 117 unit tests — SSE parsing, JSON repair, A1 guards, validation,
+                 # error scanning, audit dedupe, retry/backoff, verifier parsing
+npm run build    # tsc --noEmit + vite production build
+npm run icons    # regenerate ribbon icons
+npm run proxy    # optional local CORS fallback proxy (see below)
 ```
 
-Architecture (pure client-side, no backend):
+Architecture — pure client-side, no backend:
 
 ```
-src/llm     — provider presets/quirks, raw-fetch SSE client, tool-call JSON repair
-src/excel   — env wrapper, A1 guards, 11 agent tools, snapshot/revert stack
-src/agent   — loop (stream → tools → approval → results), system prompt, presets, history trim
-src/store   — settings (localStorage) + chat store (approval gating lives here)
-src/components — task-pane UI (React, no UI framework)
-skills/     — your SKILL.md files bundled verbatim at build time (?raw imports)
-proxy/      — optional zero-dep CORS fallback proxy
+src/llm        — provider presets/quirks, SSE client, tool-call JSON repair, HTTP retry
+src/excel      — Office.js wrapper, A1 guards, 11 agent tools, validation, verification,
+                 snapshot/revert stack
+src/agent      — agent loop (stream → tools → approval → verify), audit, AI verifier,
+                 system prompt, presets, history trimming
+src/store      — settings (localStorage) + chat store (approval gating lives here)
+src/components — task-pane UI (React 19, no UI framework)
+skills/        — SKILL.md frameworks, bundled verbatim at build time (?raw imports)
+proxy/         — optional zero-dep CORS fallback proxy
+docs/          — CORS matrix + manual E2E checklist
 ```
 
-## Deferred to v1.1
+All Office.js access is quarantined behind `src/excel/env.ts`, which keeps the rest of
+the codebase pure and unit-testable without mocking Excel.
 
-`copy_range`, `sort_range`, `create_table` (native tables/autofilter), pivot tables
-(ExcelApi 1.8 PivotTable API), out-of-order revert, streaming tool-arg preview.
+### CORS
+
+A 2026-07-19 reference test found all five providers return readable responses to
+cross-origin browser calls, so direct calls should just work. Confirm inside Excel via
+**Settings → Run CORS diagnostics** and record results in
+[docs/cors-matrix.md](docs/cors-matrix.md). If a provider ever blocks direct calls, run
+`npm run proxy` (a ~100-line local HTTPS forwarder, host-whitelisted, bound to
+127.0.0.1) and enable **Use local CORS proxy** in Settings.
+
+### Deferred to v1.1
+
+`copy_range`, `sort_range`, `create_table` (native tables/autofilter), pivot tables,
+out-of-order revert, streaming tool-argument preview.
+
+---
 
 ## Troubleshooting
 
-- **Pane doesn't load / cert warning** → rerun `npm run certs`, fully restart Excel.
-- **Button missing on ribbon** → rerun sideload script, fully quit Excel (⌘Q / taskbar exit).
-- **"No API key set"** → Settings → paste the key for the *currently selected* provider.
-- **Provider 4xx on tool calls** → try Kimi K2 or GLM-4.6 (strongest tool-callers);
-  model ids drift — the model field is free text, update it.
-- **Windows: blank pane** → verify WebView2 is installed (M365 current channel does
-  this automatically; Edge DevTools should attach to the pane).
+**Ribbon button is missing**
+- Mac: rerun `npm run sideload:mac`, then quit Excel with **⌘Q** (not just the red dot) and reopen.
+- Windows: delete the `.sideloaded` marker file, relaunch the `.vbs`, then fully **exit**
+  Excel from the taskbar and reopen.
+
+**Pane is blank or shows a certificate warning**
+- Rerun `npm run certs` (Mac) or `npx office-addin-dev-certs install` (Windows) — the
+  development certificate expires roughly monthly — then restart Excel.
+- Confirm the server is actually running: open `https://localhost:3000` in a browser.
+- Windows only: verify WebView2 is installed (Microsoft 365 current channel installs it
+  automatically; Edge DevTools should be able to attach to the pane).
+
+**"No API key set for this provider"**
+- Settings → paste the key for the **currently selected** provider. Keys are stored per
+  provider, so switching providers requires a key for that one too.
+
+**Provider returns 4xx on tool calls**
+- Model IDs drift quarterly and the model field is free text — update it.
+- Kimi K2 and GLM-4.6 are the strongest tool-callers; try one of those first.
+
+**Server won't start / port in use**
+- Something else owns port 3000. Find and stop it: `lsof -i :3000` (Mac) or
+  `netstat -ano | findstr :3000` (Windows). The port is fixed by `manifest.xml`.
+
+**Changes to the code don't show up**
+- The `.app` / `.vbs` launchers serve the frozen `dist/` build. Run `npm run build`
+  after pulling, or use `npm run dev` for hot reload during development.
+
+**The agent edited the wrong thing**
+- Use **Revert** on the tool card, or **Revert all** in the status bar, and tell it what
+  went wrong — rejection reasons and corrections are fed back into the conversation.
