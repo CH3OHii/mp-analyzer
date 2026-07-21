@@ -307,6 +307,19 @@ out-of-order revert, streaming tool-argument preview.
 
 ## Troubleshooting
 
+**Windows: the launcher says Node.js was not found**
+- Install [Node.js LTS](https://nodejs.org), then **sign out of Windows and back in**
+  before relaunching. A program started from Explorer keeps the `PATH` that Explorer had
+  at login, so a Node installed mid-session is invisible to the launcher even though
+  `where npm` works fine in a new Command Prompt.
+- The launcher also searches the standard install locations (official MSI, per-user
+  install, nvm-windows, Volta, Scoop, Chocolatey), so this dialog usually means Node
+  really is absent.
+- If you saw the raw `npm is not recognized` / `npm 不是内部或外部命令` console error
+  instead of that dialog, you are on an old launcher — `git pull` — **and** you should
+  delete the `.sideloaded` marker file, because the old launcher could write it after a
+  failed bootstrap and then skip certificate install and add-in registration forever.
+
 **Ribbon button is missing**
 - Mac: rerun `npm run sideload:mac`, then quit Excel with **⌘Q** (not just the red dot) and reopen.
 - Windows: delete the `.sideloaded` marker file, relaunch the `.vbs`, then fully **exit**
