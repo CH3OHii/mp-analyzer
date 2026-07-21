@@ -27,10 +27,17 @@ export interface ToolCardModel {
   preview?: PendingPreview;
 }
 
+export interface VerifyIssue {
+  severity: "high" | "medium" | "low";
+  description: string;
+  cells?: string;
+}
+
 export type ChatItem =
   | { kind: "user"; id: number; text: string }
   | { kind: "assistant"; id: number; text: string; reasoning: string; streaming: boolean }
   | { kind: "tool"; id: number; card: ToolCardModel }
+  | { kind: "verify"; id: number; verdict: "pass" | "issues"; issues: VerifyIssue[] }
   | { kind: "notice"; id: number; text: string }
   | { kind: "error"; id: number; text: string };
 
@@ -123,6 +130,11 @@ export function dropAssistantIfEmpty(id: number): void {
 
 export function addNotice(text: string): void {
   state = { ...state, items: [...state.items, { kind: "notice", id: nextId++, text }] };
+  notify();
+}
+
+export function addVerify(verdict: "pass" | "issues", issues: VerifyIssue[]): void {
+  state = { ...state, items: [...state.items, { kind: "verify", id: nextId++, verdict, issues }] };
   notify();
 }
 

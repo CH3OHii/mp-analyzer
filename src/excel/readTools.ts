@@ -6,6 +6,7 @@ import {
   READ_FULL_MAX,
   READ_SCAN_MAX,
   clipForRead,
+  indexToCol,
   parseA1,
   rectToA1,
   sheetOf,
@@ -66,9 +67,12 @@ export const readTools: ExcelToolSpec[] = [
         const sheetLines = entries.map((e) => {
           const vis = e.visibility !== "Visible" ? ` | ${e.visibility}` : "";
           if (e.used.isNullObject) return `${e.name} | (empty)${vis}`;
+          // Letter-annotated headers (B:"Sales") make the header→column mapping
+          // explicit, so the model targets columns by letter instead of guessing.
           const hdr = (headerMap.get(e.name) ?? [])
-            .map((v) => String(v ?? ""))
-            .filter((s) => s !== "")
+            .map((v, i) => ({ s: String(v ?? ""), col: indexToCol(e.used.columnIndex + 1 + i) }))
+            .filter((x) => x.s !== "")
+            .map((x) => `${x.col}:"${x.s}"`)
             .join(", ");
           const charts = e.chartCount.value ? ` | ${e.chartCount.value} chart(s)` : "";
           return (
@@ -85,7 +89,7 @@ export const readTools: ExcelToolSpec[] = [
   {
     name: "read_range",
     description:
-      "Read values from a range (A1 notation). Large ranges are clipped (default 50 rows, 100 cols) — paginate with start_row/max_rows. Dates/times come back as Excel serial numbers; pass include_formats to see number formats, include_formulas to see formulas.",
+      "Read values from a range (A1 notation). Large ranges are clipped (default 50 rows, 100 cols) — paginate with start_row/max_rows. Dates/times come back as Excel serial numbers; pass include_formats to see number formats, include_formulas to see formulas, include_display to see text as displayed (dates, percentages).",
     parameters: {
       type: "object",
       properties: {
@@ -93,6 +97,7 @@ export const readTools: ExcelToolSpec[] = [
         range: { type: "string", description: 'A1 range, e.g. "A1:H26"' },
         include_formulas: { type: "boolean" },
         include_formats: { type: "boolean" },
+        include_display: { type: "boolean", description: "Also return text as displayed (formatted dates, %, etc.)" },
         start_row: { type: "integer", description: "1-based row offset within the range for pagination" },
         max_rows: { type: "integer", description: `Rows to return (default ${DEFAULT_READ_ROWS})` },
       },
@@ -135,6 +140,7 @@ export const readTools: ExcelToolSpec[] = [
         const props = ["values"];
         if (args.include_formulas) props.push("formulas");
         if (args.include_formats) props.push("numberFormat");
+        if (args.include_display) props.push("text");
         target.load(props.join(","));
         await ctx.sync();
 
@@ -146,6 +152,7 @@ export const readTools: ExcelToolSpec[] = [
         };
         if (args.include_formulas) out.formulas = clipMatrix(target.formulas);
         if (args.include_formats) out.number_formats = target.numberFormat;
+        if (args.include_display) out.display = clipMatrix(target.text);
         if (clip && (clip.truncated || clip.colsTruncated)) {
           out.truncated = true;
           out.hint = "Re-request with start_row/max_rows to page through; narrow the range for more columns.";

@@ -14,11 +14,69 @@ import {
   rectToA1,
   stripSheet,
 } from "./guards";
+import { hasAnyFormula } from "./inspect";
 import { pushStep } from "./snapshot";
+import { clipMatrix } from "./summarize";
+import { checkExpectations, parseExpectList, validateRectMatrix } from "./validate";
+import { sampleMatrix, scanMatrix } from "./verify";
 import type { PendingPreview } from "../store/chatStore";
 import type { ExcelToolSpec } from "./tools";
 
 const sheetParam = { type: "string", description: "Sheet name; omit for the active sheet" };
+
+const expectParam = {
+  type: "array",
+  items: {
+    type: "object",
+    properties: {
+      cell: { type: "string", description: 'Single cell, e.g. "B4"' },
+      value: { description: "The value that cell must currently contain" },
+    },
+    required: ["cell", "value"],
+  },
+  description:
+    "Optional preconditions: each cell's CURRENT value must equal value (e.g. a header you read earlier), or nothing is written and precondition_failed is returned. Use to anchor consequential writes.",
+};
+
+/** Load expect cells' current values inside an open Excel.run (call before the
+ *  first sync); returns a closure that checks them after the sync. */
+function loadExpects(ws: Excel.Worksheet, expect: unknown) {
+  const expects = parseExpectList(expect);
+  const handles = expects.map((e) => {
+    const r = ws.getRange(stripSheet(e.cell));
+    r.load("values");
+    return r;
+  });
+  return () => {
+    const actuals = handles.map((r) => r.values?.[0]?.[0]);
+    return checkExpectations(expects, actuals);
+  };
+}
+
+/** Post-apply read-back: reload what actually landed and scan for #-errors.
+ *  Non-fatal by design — a failed verification read never fails a landed write. */
+async function readBackVerified(
+  ctx: Excel.RequestContext,
+  range: Excel.Range,
+  addr: string
+): Promise<{ verified: Record<string, unknown>; hadErrors: boolean } | null> {
+  try {
+    range.load("values,formulas");
+    await ctx.sync();
+    const scan = scanMatrix(range.values, parseA1(addr)!);
+    const verified: Record<string, unknown> = { cells_checked: scan.cells };
+    if (scan.errorCells.length) {
+      verified.error_count = scan.errorCells.length;
+      verified.errors = scan.errorCells.slice(0, 20);
+    }
+    // Formulas evaluating to "" are content, not a missing write.
+    if (scan.nonEmpty === 0 && !hasAnyFormula(range.formulas)) verified.all_empty = true;
+    verified.sample = clipMatrix(sampleMatrix(range.values));
+    return { verified, hadErrors: scan.errorCells.length > 0 };
+  } catch {
+    return null;
+  }
+}
 
 /** null/undefined cells keep their captured pre-state (values or formulas). Pure — unit-tested. */
 export function buildWriteMatrix(values: unknown[][], captured: any[][]): any[][] {
@@ -66,14 +124,18 @@ export const writeTools: ExcelToolSpec[] = [
       properties: {
         sheet: sheetParam,
         start_cell: { type: "string", description: 'Top-left cell, e.g. "B4"' },
-        values: { type: "array", items: { type: "array" }, description: "Row-major 2D array" },
+        values: { type: "array", items: { type: "array" }, description: "Row-major 2D array — strictly rectangular" },
+        expect: expectParam,
       },
       required: ["start_cell", "values"],
     },
     mutating: "soft",
     async run(args) {
-      const { rows, cols, matrix } = normalizeMatrix((args.values as unknown[][]) ?? []);
-      if (!rows || !cols) return { error: { code: "bad_values", message: "values must be a non-empty 2D array" } };
+      const shape = validateRectMatrix(args.values);
+      if (!shape.ok) return { error: { code: shape.code, message: shape.message } };
+      const matrix = args.values as unknown[][];
+      const rows = matrix.length;
+      const cols = matrix[0].length;
       const cells = rows * cols;
       if (cells > WRITE_MAX || cells > SNAPSHOT_MAX) {
         return { error: { code: "too_large", message: `${cells} cells exceeds the per-write cap — split the operation.` } };
@@ -85,21 +147,46 @@ export const writeTools: ExcelToolSpec[] = [
         ws.load("name");
         const range = ws.getRange(addr);
         range.load("formulas,numberFormat");
+        const checkExpects = loadExpects(ws, args.expect);
         await ctx.sync();
 
+        const mismatches = checkExpects();
+        if (mismatches.length) {
+          return {
+            error: {
+              code: "precondition_failed",
+              message: "expect preconditions failed — the sheet differs from what you assumed. Re-read before writing.",
+              mismatches,
+            },
+          };
+        }
+
+        const preFormulas = clone2d(range.formulas);
+        const preFormats = clone2d(range.numberFormat);
+        range.formulas = buildWriteMatrix(matrix, preFormulas);
+        await ctx.sync();
+
+        // Only record the undo step once the apply sync succeeded — a failed
+        // write must not leave a phantom entry on the revert stack.
         const step = pushStep({
           toolName: "write_range",
           kind: "range",
           label: `${ws.name}!${addr}`,
           cellCount: cells,
           inverses: [],
-          snapshots: [
-            { sheet: ws.name, address: addr, formulas: clone2d(range.formulas), numberFormats: clone2d(range.numberFormat) },
-          ],
+          snapshots: [{ sheet: ws.name, address: addr, formulas: preFormulas, numberFormats: preFormats }],
         });
-        range.formulas = buildWriteMatrix(matrix, range.formulas);
-        await ctx.sync();
-        return { ok: true, address: `${ws.name}!${addr}`, cells, __stepId: step.id };
+
+        const rb = await readBackVerified(ctx, range, addr);
+        const hasContent = matrix.some((row) => row.some((v) => v !== null && v !== undefined && v !== ""));
+        return {
+          ok: true,
+          address: `${ws.name}!${addr}`,
+          cells,
+          ...(rb ? { verified: rb.verified } : {}),
+          __stepId: step.id,
+          __mutated: { sheet: ws.name, address: addr, nonEmptyWrite: hasContent },
+        };
       });
     },
     async preview(args) {
@@ -128,6 +215,7 @@ export const writeTools: ExcelToolSpec[] = [
         range: { type: "string" },
         formulas: { type: "array", items: { type: "array" } },
         formula_r1c1: { type: "string" },
+        expect: expectParam,
       },
       required: ["range"],
     },
@@ -158,18 +246,22 @@ export const writeTools: ExcelToolSpec[] = [
         ws.load("name");
         const range = ws.getRange(addr);
         range.load("formulas,numberFormat");
+        const checkExpects = loadExpects(ws, args.expect);
         await ctx.sync();
 
-        const step = pushStep({
-          toolName: "set_formulas",
-          kind: "range",
-          label: `${ws.name}!${addr}`,
-          cellCount: cells,
-          inverses: [],
-          snapshots: [
-            { sheet: ws.name, address: addr, formulas: clone2d(range.formulas), numberFormats: clone2d(range.numberFormat) },
-          ],
-        });
+        const mismatches = checkExpects();
+        if (mismatches.length) {
+          return {
+            error: {
+              code: "precondition_failed",
+              message: "expect preconditions failed — the sheet differs from what you assumed. Re-read before writing.",
+              mismatches,
+            },
+          };
+        }
+
+        const preFormulas = clone2d(range.formulas);
+        const preFormats = clone2d(range.numberFormat);
         if (hasMatrix) {
           range.formulas = args.formulas as any[][];
         } else {
@@ -177,7 +269,26 @@ export const writeTools: ExcelToolSpec[] = [
           range.formulasR1C1 = Array.from({ length: rows }, () => Array(cols).fill(fill));
         }
         await ctx.sync();
-        return { ok: true, address: `${ws.name}!${addr}`, cells, __stepId: step.id };
+
+        // Push the undo step only after the apply sync succeeded (no phantom steps).
+        const step = pushStep({
+          toolName: "set_formulas",
+          kind: "range",
+          label: `${ws.name}!${addr}`,
+          cellCount: cells,
+          inverses: [],
+          snapshots: [{ sheet: ws.name, address: addr, formulas: preFormulas, numberFormats: preFormats }],
+        });
+
+        const rb = await readBackVerified(ctx, range, addr);
+        return {
+          ok: true,
+          address: `${ws.name}!${addr}`,
+          cells,
+          ...(rb ? { verified: rb.verified } : {}),
+          __stepId: step.id,
+          __mutated: { sheet: ws.name, address: addr, nonEmptyWrite: true },
+        };
       });
     },
     async preview(args) {
@@ -293,6 +404,8 @@ export const writeTools: ExcelToolSpec[] = [
                 numberFormats: clone2d(used.numberFormat),
               };
           if (action === "clear") {
+            if (!used.isNullObject) used.clear(Excel.ClearApplyTo.all);
+            await ctx.sync();
             const step = pushStep({
               toolName: "manage_sheet",
               kind: "range",
@@ -301,20 +414,19 @@ export const writeTools: ExcelToolSpec[] = [
               snapshots: content ? [content] : [],
               inverses: [],
             });
-            if (!used.isNullObject) used.clear(Excel.ClearApplyTo.all);
-            await ctx.sync();
             return { ok: true, cleared: name, note: "Revert restores contents and number formats, not rich styling.", __stepId: step.id };
           }
+          const position = ws.position;
+          ws.delete();
+          await ctx.sync();
           const step = pushStep({
             toolName: "manage_sheet",
             kind: "structure",
             label: `- ${name}`,
             cellCount: cells,
             snapshots: [],
-            inverses: [{ op: "restore_sheet", name, position: ws.position, content }],
+            inverses: [{ op: "restore_sheet", name, position, content }],
           });
-          ws.delete();
-          await ctx.sync();
           return { ok: true, deleted: name, note: "Revert restores contents; formulas elsewhere referencing this sheet keep #REF!.", __stepId: step.id };
         });
       }
@@ -393,6 +505,8 @@ export const writeTools: ExcelToolSpec[] = [
                 formulas: clone2d(inter.formulas),
                 numberFormats: clone2d(inter.numberFormat),
               };
+          target.delete(isRows ? Excel.DeleteShiftDirection.up : Excel.DeleteShiftDirection.left);
+          await ctx.sync();
           const step = pushStep({
             toolName: "insert_delete",
             kind: "structure",
@@ -401,8 +515,6 @@ export const writeTools: ExcelToolSpec[] = [
             snapshots: [],
             inverses: [{ op: "reinsert_removed", sheet: ws.name, kind, index, count, content }],
           });
-          target.delete(isRows ? Excel.DeleteShiftDirection.up : Excel.DeleteShiftDirection.left);
-          await ctx.sync();
           return { ok: true, deleted: addr, sheet: ws.name, __stepId: step.id };
         });
       }

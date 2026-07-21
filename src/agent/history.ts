@@ -37,9 +37,14 @@ const KEEP_TAIL = 6;
  * pass 1 elides old tool-result BODIES (the tool message itself stays so every
  * assistant tool_calls keeps its paired tool response — several providers 400
  * otherwise); pass 2 drops whole user→…→assistant exchanges, keeping the first
- * user message (session anchor) and always the current exchange.
+ * user message (session anchor) and the last `protectTailUserBlocks` blocks.
+ *
+ * protectTailUserBlocks exists because the agent loop can inject synthetic
+ * role:"user" repair prompts ([automated audit]/[verification]) AFTER the real
+ * current exchange — with the default of 1, those injections would become the
+ * only protected block and the actual current turn could be spliced away.
  */
-export function trimHistory(history: ChatMessage[], budget: number): ChatMessage[] {
+export function trimHistory(history: ChatMessage[], budget: number, protectTailUserBlocks = 1): ChatMessage[] {
   const msgs = history.map((m) => ({ ...m }));
   const total = () => estimateHistoryTokens(msgs);
   if (total() <= budget) return msgs;
@@ -54,8 +59,9 @@ export function trimHistory(history: ChatMessage[], budget: number): ChatMessage
 
   const userIndexes = () => msgs.reduce<number[]>((acc, m, i) => (m.role === "user" ? [...acc, i] : acc), []);
   let idx = userIndexes();
-  // Drop middle blocks: never block 0 (first user msg) and never the last block.
-  while (total() > budget && idx.length > 2) {
+  // Drop middle blocks: never block 0 (first user msg), never the protected tail.
+  const keepTail = Math.max(1, protectTailUserBlocks);
+  while (total() > budget && idx.length > 1 + keepTail) {
     msgs.splice(idx[1], idx[2] - idx[1]);
     idx = userIndexes();
   }

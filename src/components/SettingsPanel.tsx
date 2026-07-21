@@ -87,6 +87,18 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           <input type="checkbox" checked={s.autoApply} onChange={(e) => updateSettings({ autoApply: e.target.checked })} />
           {t.autoApply}
         </label>
+        <div className="field">
+          <label>{t.verifyModeLabel}</label>
+          <select
+            value={s.verifyMode}
+            onChange={(e) => updateSettings({ verifyMode: e.target.value as "off" | "basic" | "full" })}
+          >
+            <option value="full">{t.verifyModeFull}</option>
+            <option value="basic">{t.verifyModeBasic}</option>
+            <option value="off">{t.verifyModeOff}</option>
+          </select>
+          <div className="hint">{t.verifyModeHint}</div>
+        </div>
         <div className="row">
           <div className="field" style={{ flex: 1 }}>
             <label>{t.contextBudget}</label>

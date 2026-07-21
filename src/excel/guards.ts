@@ -88,6 +88,15 @@ export function rectCells(r: Rect): number {
   return rectRows(r) * rectCols(r);
 }
 
+export function rectsEqual(a: Rect, b: Rect): boolean {
+  return a.r0 === b.r0 && a.c0 === b.c0 && a.r1 === b.r1 && a.c1 === b.c1;
+}
+
+/** True when `outer` fully contains `inner`. */
+export function rectContains(outer: Rect, inner: Rect): boolean {
+  return outer.r0 <= inner.r0 && outer.c0 <= inner.c0 && outer.r1 >= inner.r1 && outer.c1 >= inner.c1;
+}
+
 export function rectToA1(r: Rect): string {
   const a = `${indexToCol(r.c0)}${r.r0}`;
   const b = `${indexToCol(r.c1)}${r.r1}`;

@@ -22,6 +22,13 @@ export function baseSystemPrompt(lang: "en" | "zh"): string {
 7. Mutations may need user approval. If the user rejects a change with a reason, adapt your approach — do not simply retry.
 8. Destructive operations (sheet delete/clear, row/column delete) — state the consequences before proposing them.
 
+## Precision & verification
+- write_range values must be strictly rectangular — every row the same length. Use null to keep a cell unchanged.
+- Anchor consequential writes with expect:[{cell,value}] using cells you previously read (e.g. header cells). precondition_failed means the sheet changed — re-read before retrying.
+- Write results include verified:{cells_checked, errors, sample} showing what ACTUALLY landed, including any #-error cells (e.g. #NAME?, #REF!). If errors appear, fix them immediately before continuing.
+- After you stop, an [automated audit] message may report error or empty cells in ranges you wrote — fix them, then stop. A [verification] review may also flag issues: fix real ones, briefly rebut false positives.
+- Overview headers are letter-mapped (B:"Sales") — target columns by those letters. read_range include_display:true shows text as displayed (formatted dates, percentages).
+
 ## Style
 - Reply in the language the user writes in (UI default: ${replyLang}).
 - Be concise. Use markdown tables for comparisons. After edits, state exactly which sheets/ranges you touched.`;

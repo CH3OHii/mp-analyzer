@@ -29,3 +29,35 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
 11. **Windows-only** — ribbon icon renders at 16/32/80; IME guard: typing Chinese and
     pressing Enter to confirm composition does NOT send; certs trusted; pane runs in
     WebView2 (Edge DevTools attach works).
+
+## Verification layer (legendary update)
+
+12. ★ **Post-op read-back** — ask for a formula column but nudge the model into a bad
+    function name (or hand-edit a formula to `=SUMM(...)` first and ask the agent to
+    copy the pattern) → the write's tool card result shows `verified.errors` with
+    `#NAME?`, and the model fixes it within the same turn without being asked.
+13. ★ **Turn-end audit + green card** — normal multi-step build → after the model's
+    final answer a green "Verification passed" card appears. Then set verifyMode to
+    `off` in Settings → no audit, no card, old behavior.
+14. **AI review (full mode)** — ask for something the deterministic audit can't catch
+    (e.g. "sum column B" but the model sums the wrong column — force by rejecting its
+    first read) → the AI review card lists the issue and the model repairs; bounded:
+    at most ~3 extra steps, never loops.
+15. ★ **expect preconditions** — after the model reads headers, edit a header cell
+    manually mid-turn (before approving the pending write) → `precondition_failed`
+    with the actual value; nothing was written; model re-reads.
+16. **unknown_sheet suggestion** — ask to write to a slightly-misspelled sheet name
+    ("Sumary") → tool errors with did-you-mean suggestion; no Office exception; model
+    self-corrects to the real name.
+17. ★ **Ragged write rejection** — coax a jagged 2D write (rare naturally; can test by
+    temporarily lowering temperature and asking for uneven rows) → `ragged_values`
+    teaching error, model pads with null and retries.
+18. ★ **Border revert** — "add thin borders to A1:D5" → Revert removes the borders
+    (pre-update this left them behind).
+19. **Failed-write stack integrity** — trigger a write onto a protected sheet →
+    error card, and the Revert stack does NOT contain a phantom step for it
+    (StatusBar count unchanged).
+20. **HTTP retry** — briefly cut network, send a message → notice appears only after
+    ~3 backoff attempts fail; restore network mid-backoff → the turn proceeds.
+21. **Stop during verification** — hit Stop while the "AI review" call is in flight →
+    turn aborts cleanly ("Stopped."), no verify card, no stuck spinner.

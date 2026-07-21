@@ -62,6 +62,20 @@ describe("trimHistory", () => {
     }
   });
 
+  it("protects extra tail user blocks for injected audit/verifier prompts", () => {
+    // [anchor turn][current turn][tiny injected repair prompt] — with the default
+    // protection of 1, only the injection would survive pass 2 and the CURRENT
+    // turn would be spliced away; protectTailUserBlocks=2 must keep both.
+    const h = [
+      ...toolTurn("anchor", 4000, "c1"),
+      ...toolTurn("current request", 4000, "c2"),
+      { role: "user" as const, content: "[automated audit] fix B4=#NAME? then stop." },
+    ];
+    const out = trimHistory(h, 300, 2);
+    expect(out.some((m) => m.role === "user" && m.content === "current request")).toBe(true);
+    expect(out.some((m) => typeof m.content === "string" && m.content.startsWith("[automated audit]"))).toBe(true);
+  });
+
   it("does not mutate the original history", () => {
     const h = toolTurn("first", 8000, "c1");
     const before = JSON.stringify(h);

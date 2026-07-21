@@ -127,6 +127,9 @@ export const formatTools: ExcelToolSpec[] = [
               horizontalAlignment: true,
               verticalAlignment: true,
               wrapText: true,
+              // Border payloads are heavy (~4 objects/cell) — capture them only
+              // when this call actually edits borders, so revert can undo them.
+              ...(args.borders != null ? { borders: { color: true, style: true, weight: true } } : {}),
             },
           });
           if (args.number_format != null) range.load("numberFormat");
@@ -157,15 +160,6 @@ export const formatTools: ExcelToolSpec[] = [
         if (wantsColSizes) snap.colWidths = colFmtHandles.map((f) => f.columnWidth);
         if (wantsRowSizes) snap.rowHeights = rowFmtHandles.map((f) => f.rowHeight);
         const inverses: InverseOp[] = args.merge === "merge" ? [{ op: "unmerge", sheet: ws.name, address: addr }] : [];
-
-        const step = pushStep({
-          toolName: "format_range",
-          kind: "format",
-          label: `${ws.name}!${addr}`,
-          cellCount: wantsCellFmt ? cells : 0,
-          snapshots: [snap],
-          inverses,
-        });
 
         // ---- apply
         if (args.number_format != null) {
@@ -241,6 +235,15 @@ export const formatTools: ExcelToolSpec[] = [
           applied.push("autofit_rows");
         }
         await ctx.sync();
+        // Push the undo step only after the apply sync succeeded (no phantom steps).
+        const step = pushStep({
+          toolName: "format_range",
+          kind: "format",
+          label: `${ws.name}!${addr}`,
+          cellCount: wantsCellFmt ? cells : 0,
+          snapshots: [snap],
+          inverses,
+        });
         return { ok: true, address: `${ws.name}!${addr}`, applied, __stepId: step.id };
       });
     },

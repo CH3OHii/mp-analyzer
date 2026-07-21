@@ -89,6 +89,20 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .notice { color: var(--text-dim); font-size: 12px; text-align: center; padding: 4px; }
 .error-banner { background: var(--danger-soft); color: var(--danger); border: 1px solid #eecaca; border-radius: 6px; padding: 6px 10px; font-size: 12px; white-space: pre-wrap; overflow-wrap: break-word; }
 
+/* ---------- verification card ---------- */
+.verifycard { border-radius: var(--radius); font-size: 12px; padding: 6px 10px; }
+.verifycard.pass { background: #e7f4ea; color: var(--green); border: 1px solid #cfe8d6; display: flex; align-items: center; gap: 6px; }
+.verifycard.issues { background: var(--warn-soft); border: 1px solid #ecd9b0; color: var(--text); }
+.verifycard.issues .head { display: flex; align-items: center; gap: 6px; font-weight: 600; color: #9a6b15; }
+.verifycard.issues ul { margin: 6px 0 2px; padding-left: 18px; }
+.verifycard.issues li { margin: 3px 0; overflow-wrap: break-word; }
+.verifycard .sev { border-radius: 999px; padding: 0 7px; font-size: 11px; margin-right: 4px; white-space: nowrap; }
+.verifycard .sev.high { background: var(--danger-soft); color: var(--danger); }
+.verifycard .sev.medium { background: var(--warn-soft); border: 1px solid #ecd9b0; color: #9a6b15; }
+.verifycard .sev.low { background: var(--bg-alt); border: 1px solid var(--border); color: var(--text-dim); }
+.verifycard .cells { color: var(--text-dim); font-family: var(--mono); font-size: 11px; }
+.verifycard svg { flex: none; vertical-align: middle; }
+
 .thinking { border-left: 3px solid var(--border); padding: 2px 8px; color: var(--text-dim); font-size: 12px; }
 .thinking summary { cursor: pointer; user-select: none; }
 .thinking .body { white-space: pre-wrap; max-height: 180px; overflow-y: auto; margin-top: 4px; }

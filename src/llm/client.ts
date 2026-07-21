@@ -1,3 +1,4 @@
+import { fetchWithRetry } from "./retry";
 import { SseAccumulator } from "./sse";
 import type { ChatMessage, LlmSettings, ProviderQuirks, StreamEvent, ToolCall, ToolDef } from "./types";
 
@@ -50,12 +51,18 @@ export async function streamChat(opts: {
   if (quirks.supportsStreamOptionsUsage) body.stream_options = { include_usage: true };
   if (quirks.extraBody) Object.assign(body, quirks.extraBody);
 
-  const res = await fetch(effectiveBaseUrl(s) + "/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey}` },
-    body: JSON.stringify(body),
-    signal: opts.signal,
-  });
+  // Transient 429/5xx/network failures retry with backoff. Retries only happen
+  // here, before the body reader exists — a stream that already started fails loud.
+  const res = await fetchWithRetry(
+    () =>
+      fetch(effectiveBaseUrl(s) + "/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.apiKey}` },
+        body: JSON.stringify(body),
+        signal: opts.signal,
+      }),
+    { signal: opts.signal }
+  );
   if (!res.ok || !res.body) {
     const text = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status} ${res.statusText || ""} — ${text.slice(0, 400)}`);

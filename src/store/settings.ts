@@ -17,6 +17,9 @@ export interface AppSettings {
   apiKeys: Partial<Record<ProviderId, string>>;
   language: "en" | "zh";
   autoApply: boolean;
+  /** Result verification: "basic" = deterministic read-back audit only,
+   *  "full" = audit + one extra LLM review call per mutating turn. */
+  verifyMode: "off" | "basic" | "full";
   contextBudgetTokens: number;
   maxIters: number;
   analysisPresetId: string | null;
@@ -41,6 +44,7 @@ function defaults(): AppSettings {
     apiKeys: {},
     language: "zh",
     autoApply: false,
+    verifyMode: "full",
     contextBudgetTokens: 32000,
     maxIters: 15,
     analysisPresetId: null,

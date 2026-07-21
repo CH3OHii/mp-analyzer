@@ -23,6 +23,12 @@ export const en = {
   runDiagnostics: "Run CORS diagnostics (all providers)",
   diagHint: "A readable 401 = CORS OK (key wrong is fine). A network failure = blocked → use proxy. Record results in docs/cors-matrix.md.",
   autoApply: "Auto-apply changes (destructive ops still ask)",
+  verifyModeLabel: "Result verification",
+  verifyModeOff: "Off",
+  verifyModeBasic: "Basic — re-check written cells",
+  verifyModeFull: "Full — re-check + AI review",
+  verifyModeHint:
+    "Basic re-reads every written range for formula errors after the agent finishes. Full adds one extra AI review call per editing turn.",
   contextBudget: "Context budget (tokens)",
   maxIters: "Max agent steps per turn",
   temperature: "Temperature",
@@ -75,5 +81,12 @@ export const en = {
   statusRejected: "rejected",
   statusError: "error",
   statusReverted: "reverted",
+  verifyPass: "Verification passed — no issues found in the written ranges.",
+  verifyIssuesTitle: "Verification found possible issues",
+  verifierUnavailable: "AI reviewer unavailable — skipped the AI review.",
+  auditFoundIssues: (n: number) => `Automated audit found problems in ${n} written range(s) — asking the model to fix them.`,
+  sevHigh: "high",
+  sevMedium: "medium",
+  sevLow: "low",
 };
 export type Dict = typeof en;

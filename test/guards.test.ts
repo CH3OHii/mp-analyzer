@@ -1,4 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { rectContains, rectsEqual } from "../src/excel/guards";
+
+// (parseA1 comes from the main guards import below — imports are hoisted)
+describe("rectContains / rectsEqual", () => {
+  const r = (a1: string) => parseA1(a1)!;
+  it("detects containment including exact equality", () => {
+    expect(rectContains(r("A1:D20"), r("B2:C3"))).toBe(true);
+    expect(rectContains(r("A1:D20"), r("A1:D20"))).toBe(true);
+    expect(rectContains(r("B2:C3"), r("A1:D20"))).toBe(false);
+    expect(rectContains(r("A1:D20"), r("C15:E16"))).toBe(false); // partial overlap
+  });
+  it("compares rects for equality", () => {
+    expect(rectsEqual(r("A1:B2"), r("B2:A1"))).toBe(true); // parseA1 normalizes corners
+    expect(rectsEqual(r("A1:B2"), r("A1:B3"))).toBe(false);
+  });
+});
 import {
   READ_FULL_MAX,
   clipForRead,

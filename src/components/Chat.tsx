@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { useChat } from "../store/chatStore";
 import ToolCard from "./ToolCard";
+import VerifyCard from "./VerifyCard";
 
 function Md({ text }: { text: string }) {
   const html = DOMPurify.sanitize(marked.parse(text, { async: false, breaks: true }) as string);
@@ -62,6 +63,8 @@ export default function Chat() {
             );
           case "tool":
             return <ToolCard key={it.id} card={it.card} isPendingActive={state.pendingCardId === it.id} />;
+          case "verify":
+            return <VerifyCard key={it.id} verdict={it.verdict} issues={it.issues} />;
           case "notice":
             return (
               <div key={it.id} className="notice">
