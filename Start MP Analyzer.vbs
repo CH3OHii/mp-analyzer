@@ -75,18 +75,38 @@ sh.Run "cmd /c start excel", 0, False
 ' Runs a bootstrap step in the project folder in a visible console, and returns its
 ' REAL exit code. The window stays open on failure so the tool's own error is readable.
 '
-' The previous form -- cmd /c <step> || pause -- always returned 0, because `pause`
-' itself succeeds. A failed step therefore looked like success, and the script went on
-' to write the .sideloaded marker, which permanently skips certificate + registration
-' on every later run. Hence: save errorlevel first, pause second, exit with the saved
-' value (delayed expansion via /v:on, since %errorlevel% would expand at parse time).
+' This writes a small temp .bat file and runs THAT, rather than packing everything
+' (cd, the step, an errorlevel check, echo, pause) onto one cmd.exe /c line with
+' && and & mixed together. Two earlier one-liner attempts each caused a confusing
+' false failure -- first `... || pause` always returning 0 because `pause` itself
+' succeeds, then a delayed-expansion (!RC!) version that intermittently reported
+' "failed with exit code 0", a contradiction that points at single-line command
+' parsing/timing, not the step itself. A normal multi-line .bat with a plain
+' `if errorlevel 1 (...)` check is the idiom every Windows batch tutorial uses for
+' a reason: %errorlevel% inside that block is substituted once, when the `if` line
+' is reached -- i.e. right after the preceding command set it -- with no timing
+' games to get wrong. It is also just a file, so it can be opened and read if
+' something still looks wrong.
 Function RunInProject(label, cmdline)
-  Dim c
-  c = "cmd /v:on /c cd /d """ & projectDir & """ && " & cmdline & _
-      " & set RC=!errorlevel!" & _
-      " & if not ""!RC!""==""0"" (echo.&echo [MP Analyzer] " & label & " failed with exit code !RC!&pause)" & _
-      " & exit /b !RC!"
-  RunInProject = sh.Run(c, 1, True)
+  Dim batPath, bat, ret
+  batPath = fso.GetSpecialFolder(2) & "\mp-analyzer-step.bat"  ' 2 = TemporaryFolder
+
+  Set bat = fso.CreateTextFile(batPath, True)
+  bat.WriteLine "@echo off"
+  bat.WriteLine "cd /d """ & projectDir & """"
+  bat.WriteLine cmdline
+  bat.WriteLine "if errorlevel 1 ("
+  bat.WriteLine "  echo."
+  bat.WriteLine "  echo [MP Analyzer] " & label & " failed with exit code %errorlevel%"
+  bat.WriteLine "  pause"
+  bat.WriteLine "  exit /b 1"
+  bat.WriteLine ")"
+  bat.WriteLine "exit /b 0"
+  bat.Close
+
+  ret = sh.Run("cmd /c """ & batPath & """", 1, True)
+  If fso.FileExists(batPath) Then fso.DeleteFile batPath, True
+  RunInProject = ret
 End Function
 
 Function NpmResolves()

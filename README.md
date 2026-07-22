@@ -326,6 +326,13 @@ out-of-order revert, streaming tool-argument preview.
   delete the `.sideloaded` marker file, because the old launcher could write it after a
   failed bootstrap and then skip certificate install and add-in registration forever.
 
+**Windows: launcher says a step "failed with exit code 0"**
+- That combination is a contradiction (exit code 0 means success) and was a bug in the
+  launcher's own error reporting, not in `npm`/the certificate tool/the sideload tool.
+  `git pull` for the fix — the launcher now runs each bootstrap step through a small
+  temp `.bat` file instead of one packed `cmd.exe` line, which removes the timing
+  quirk that produced the false "failed" report.
+
 **Windows: `EPERM: operation not permitted, rmdir …\npm-cache\_npx\…`**
 - The launcher no longer uses `npx` for setup, so `git pull` and relaunch fixes this. If
   you hit it running commands by hand, use `npm run certs` and `npm run sideload:win`
