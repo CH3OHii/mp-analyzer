@@ -14,6 +14,7 @@
     "start": "node scripts/serve.mjs",
     "launcher:mac": "bash scripts/make-launcher-mac.sh",
     "sideload:mac": "bash scripts/sideload-mac.sh",
+    "sideload:win": "office-addin-dev-settings sideload manifest.xml",
     "proxy": "node proxy/cors-proxy.mjs",
     "icons": "node scripts/make-icons.mjs",
     "test": "vitest run"

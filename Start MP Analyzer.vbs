@@ -51,8 +51,17 @@ If Not fso.FolderExists(projectDir & "\node_modules") Then
 End If
 
 If Not fso.FileExists(marker) Then
-  ret = RunInProject("certificate + add-in registration", _
-        "npx office-addin-dev-certs install && npx office-addin-dev-settings sideload manifest.xml")
+  ' Run the LOCALLY installed tools via their npm scripts, never `npx`. npx would
+  ' re-download each tool into its own %LOCALAPPDATA%\npm-cache\_npx exec-cache and
+  ' then try to delete it, which on Windows routinely fails with
+  '   EPERM: operation not permitted, rmdir ...\_npx\...
+  ' when real-time antivirus is holding a scan lock on the freshly-extracted files.
+  ' `npm run` uses node_modules\.bin directly — no _npx dir is ever created, so there
+  ' is nothing to hit that error on. The two steps are separate so a failure names
+  ' exactly which one broke.
+  ret = RunInProject("certificate install", "npm run certs")
+  If ret <> 0 Then WScript.Quit ret
+  ret = RunInProject("add-in registration", "npm run sideload:win")
   If ret <> 0 Then WScript.Quit ret
   fso.CreateTextFile(marker, True).Close
 End If

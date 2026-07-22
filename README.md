@@ -183,10 +183,16 @@ and place a **shortcut** to the `.vbs` file in that folder (a shortcut, not a co
 ```powershell
 cd "MP Analyzer"
 npm install
-npx office-addin-dev-certs install
-npx office-addin-dev-settings sideload manifest.xml
+npm run certs         # NOT `npx office-addin-dev-certs` — see note below
+npm run sideload:win
 npm run dev
 ```
+
+> Use `npm run certs` / `npm run sideload:win`, which invoke the tools already installed
+> in `node_modules`. Avoid the `npx …` form: npx re-downloads each tool into its
+> `%LOCALAPPDATA%\npm-cache\_npx` cache and then deletes it, which frequently fails on
+> Windows with `EPERM: operation not permitted, rmdir …\_npx\…` when antivirus is
+> holding a lock on the freshly-extracted files.
 
 If the registry-based sideload misbehaves, use the classic shared-folder fallback:
 
@@ -319,6 +325,16 @@ out-of-order revert, streaming tool-argument preview.
   instead of that dialog, you are on an old launcher — `git pull` — **and** you should
   delete the `.sideloaded` marker file, because the old launcher could write it after a
   failed bootstrap and then skip certificate install and add-in registration forever.
+
+**Windows: `EPERM: operation not permitted, rmdir …\npm-cache\_npx\…`**
+- The launcher no longer uses `npx` for setup, so `git pull` and relaunch fixes this. If
+  you hit it running commands by hand, use `npm run certs` and `npm run sideload:win`
+  instead of the `npx …` forms — they run the locally installed tools and never touch the
+  `_npx` cache.
+- The lock is almost always real-time antivirus scanning the npm cache. If it persists,
+  add an exclusion for `%LOCALAPPDATA%\npm-cache` in Windows Security → Virus & threat
+  protection → Manage settings → Exclusions, then delete the stale cache once:
+  `rmdir /s /q "%LOCALAPPDATA%\npm-cache\_npx"`.
 
 **Ribbon button is missing**
 - Mac: rerun `npm run sideload:mac`, then quit Excel with **⌘Q** (not just the red dot) and reopen.
