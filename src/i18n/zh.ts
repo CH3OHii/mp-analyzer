@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const zh: Dict = {
   appTitle: "MP Analyzer",
-  composerPlaceholder: "询问工作簿内容 — 输入 / 选择分析技能…",
+  composerPlaceholder: "想分析点什么？",
   send: "发送",
   stop: "停止",
   newChat: "新对话",

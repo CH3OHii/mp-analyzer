@@ -1,6 +1,6 @@
 export const en = {
   appTitle: "MP Analyzer",
-  composerPlaceholder: "Ask about the workbook — type / to pick a skill…",
+  composerPlaceholder: "What do you want to analyze?",
   send: "Send",
   stop: "Stop",
   newChat: "New chat",
