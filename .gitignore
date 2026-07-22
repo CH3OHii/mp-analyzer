@@ -1,8 +1,11 @@
 node_modules/
-# Analysis skills are personal/proprietary — bundled locally at build time,
-# never committed. See skills/README.md.
+# Analysis skills at the TOP LEVEL are personal/proprietary — bundled locally
+# at build time, never committed. See skills/README.md.
+# skills/builtin/ is the exception: committed, generic skills shipped with the
+# repo (the negation below is a guard — `skills/*.md` does not cross the `/`).
 skills/*.md
 !skills/README.md
+!skills/builtin/*.md
 .claude/
 MP Analyzer.app/
 .sideloaded

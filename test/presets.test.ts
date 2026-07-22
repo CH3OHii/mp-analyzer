@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterPresets, type Preset } from "../src/agent/presets";
+import { filterPresets, mergeSkillSources, type Preset, type SkillSource } from "../src/agent/presets";
 
 function p(id: string, nameEn: string, nameZh: string): Preset {
   return { id, nameEn, nameZh, source: "builtin", body: "b", adaptationNote: "", approxTokens: 1 };
@@ -31,5 +31,26 @@ describe("filterPresets", () => {
 
   it("returns empty on no match", () => {
     expect(filterPresets("zzz", presets)).toEqual([]);
+  });
+});
+
+describe("mergeSkillSources", () => {
+  const src = (slug: string, raw: string): SkillSource => ({ slug, raw });
+
+  it("keeps user skills first, then committed built-ins", () => {
+    const merged = mergeSkillSources([src("zeta-private", "u")], [src("alpha-builtin", "b")]);
+    expect(merged.map((s) => s.slug)).toEqual(["zeta-private", "alpha-builtin"]);
+  });
+
+  it("a private user file overrides a committed builtin with the same slug", () => {
+    const merged = mergeSkillSources([src("ev-industry-analyst", "USER FORK")], [src("ev-industry-analyst", "SHIPPED")]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].raw).toBe("USER FORK");
+  });
+
+  it("works with either side empty", () => {
+    expect(mergeSkillSources([], [src("a", "1")])).toHaveLength(1);
+    expect(mergeSkillSources([src("a", "1")], [])).toHaveLength(1);
+    expect(mergeSkillSources([], [])).toEqual([]);
   });
 });
