@@ -41,7 +41,6 @@ export const zh: Dict = {
   presets: "技能",
   analysisPreset: "分析技能",
   styleLayer: "报表美化（excel-generator）",
-  nonePreset: "无（通用助手）",
   addPreset: "新增自定义技能",
   presetNameEn: "名称（EN）",
   presetNameZh: "名称（中文）",

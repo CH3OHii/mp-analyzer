@@ -6,15 +6,14 @@ filesystem at runtime. Pick a skill by typing **`/`** in the composer.
 
 ## Built-in skills (committed)
 
-[`builtin/`](builtin) ships five generic, public-safe analyst skills:
+[`builtin/`](builtin) ships one generic, public-safe analyst skill:
 
 | File | Skill |
 | --- | --- |
-| `market-sizing-forecasting.md` | TAM/SAM/SOM, S-curve fitting, scenarios, tornado sensitivity |
-| `kpi-variance-decomposition.md` | YoY/MoM bridges — volume/price/mix, waterfalls, margin & share bridges |
-| `data-cleaning-validation.md` | Profiling, dedupe, outlier triage, unit normalization, reconciliation |
-| `competitive-financial-benchmarking.md` | Peer sets, dual-basis share tracking, ratio ladders, league tables |
-| `ev-industry-analyst.md` | China NEV monthly attribution — policy × launches × pricing × channel data, with web search |
+| `ev-industry-analyst.md` | **分析师 / Analyst** — China NEV monthly attribution: policy × launches × pricing × channel data, tier-tagged evidence, web search when available |
+
+There is no "None" entry in the `/` menu: running without a skill is the default, and
+clearing the active-skill pill returns to it.
 
 ## Your own skills (private, top level)
 

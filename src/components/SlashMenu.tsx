@@ -2,7 +2,6 @@ import { Check, Palette } from "lucide-react";
 
 /** One row of the "/" menu. Labels/subs are pre-localized by the composer. */
 export type SlashEntry =
-  | { kind: "none"; label: string; selected: boolean }
   | { kind: "preset"; id: string; label: string; sub: string; selected: boolean }
   | { kind: "style"; label: string; sub: string; on: boolean };
 
@@ -36,7 +35,7 @@ export default function SlashMenu({
             <span className="chip-text">{en.label}</span>
             {(en.kind === "style" ? en.on : en.selected) && <Check size={12} className="option-check" />}
           </div>
-          {en.kind !== "none" && en.sub && <div className="sub">{en.sub}</div>}
+          {en.sub && <div className="sub">{en.sub}</div>}
         </div>
       ))}
     </div>

@@ -40,7 +40,6 @@ export const en = {
   presets: "Presets",
   analysisPreset: "Analysis skill",
   styleLayer: "Report styling (excel-generator)",
-  nonePreset: "None (general assistant)",
   addPreset: "Add custom preset",
   presetNameEn: "Name (EN)",
   presetNameZh: "Name (中文)",

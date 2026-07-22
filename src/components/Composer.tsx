@@ -45,9 +45,8 @@ export default function Composer() {
   const entries: SlashEntry[] = [];
   if (slashOpen) {
     const q = text.slice(1).toLowerCase();
-    if (!q || t.nonePreset.toLowerCase().includes(q) || "none".includes(q)) {
-      entries.push({ kind: "none", label: t.nonePreset, selected: !active });
-    }
+    // No "None" row: no skill IS the default, and the active-skill pill's ×
+    // is how you go back to it.
     for (const p of filterPresets(q, presets)) {
       entries.push({
         kind: "preset",
@@ -72,8 +71,7 @@ export default function Composer() {
   const hi = Math.min(highlight, Math.max(0, entries.length - 1));
 
   function pick(en: SlashEntry) {
-    if (en.kind === "none") updateSettings({ analysisPresetId: null });
-    else if (en.kind === "preset") updateSettings({ analysisPresetId: en.id });
+    if (en.kind === "preset") updateSettings({ analysisPresetId: en.id });
     else updateSettings({ styleLayerOn: !s.styleLayerOn });
     setText("");
     setHighlight(0);

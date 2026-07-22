@@ -65,13 +65,7 @@ describe("mergeSkillSources", () => {
 // Subset assertions only — developers may have extra private skills in the
 // top-level skills/ dir, so never assert exact list equality.
 describe("shipped builtin skills", () => {
-  const SHIPPED = [
-    "market-sizing-forecasting",
-    "kpi-variance-decomposition",
-    "data-cleaning-validation",
-    "competitive-financial-benchmarking",
-    "ev-industry-analyst",
-  ];
+  const SHIPPED = ["ev-industry-analyst"];
 
   it("all five resolve with bilingual names, a note, and a token estimate", () => {
     for (const slug of SHIPPED) {

@@ -10,13 +10,12 @@ scenario tables, formatting, conditional formats, charts. Every mutation is
 one-click revert** — programmatic edits bypass Excel's own Ctrl+Z, so the add-in
 brings its own undo stack.
 
-**Five analyst skills ship built-in** (in [skills/builtin/](skills/builtin)): market
-sizing & forecasting, KPI variance decomposition (bridges/waterfalls), data cleaning &
-validation, competitive & financial benchmarking, and an EV industry senior analyst that
-combines policy changes, launch calendars, pricing moves, and registration data into one
-attribution — with web search when the provider supports it. Activate any of them by
-typing **`/`** in the composer (Claude Code-style picker; the active skill shows as a
-removable pill above the input).
+**An analyst skill ships built-in** ([skills/builtin/](skills/builtin)): a senior China
+NEV industry analyst that layers policy changes, launch calendars, pricing moves, and
+registration data into one tier-tagged monthly attribution — using web search when the
+provider supports it. Activate it by typing **`/`** in the composer (Claude Code-style
+picker; the active skill shows as a removable pill above the input, and clearing the pill
+returns to the plain assistant).
 
 **Your own skills stay private.** Drop any `*.md` framework into the top-level `skills/`
 folder and it becomes a selectable preset too (bundled at build time, gitignored, and it
