@@ -1,5 +1,5 @@
-import { Globe, Palette, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { ArrowUp, Globe, Palette, Square, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { sendOrQueue } from "../agent/dispatch";
 import { filterPresets, resolveAnalysisPresets, styleLayerPreset, type Preset } from "../agent/presets";
 import { useT } from "../i18n";
@@ -21,6 +21,15 @@ export default function Composer() {
   // IME guard: while a Chinese composition is active, intercept NOTHING —
   // Enter confirms the composition and arrows navigate candidates.
   const composing = useRef(false);
+  const taRef = useRef<HTMLTextAreaElement>(null);
+
+  // One-line start, grow with content up to the CSS max-height.
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }, [text]);
 
   const presets = resolveAnalysisPresets(s.customPresets);
   const active = s.analysisPresetId ? presets.find((p) => p.id === s.analysisPresetId) : null;
@@ -122,9 +131,10 @@ export default function Composer() {
       )}
       <div className="composer">
         <textarea
+          ref={taRef}
           value={text}
           placeholder={t.composerPlaceholder}
-          rows={2}
+          rows={1}
           onChange={(e) => {
             const v = e.target.value;
             setText(v);
@@ -172,12 +182,12 @@ export default function Composer() {
           <Globe size={15} />
         </button>
         {chatState.streaming ? (
-          <button className="btn danger" onClick={stopTurn}>
-            {t.stop}
+          <button className="sendbtn stop" onClick={stopTurn} title={t.stop}>
+            <Square size={12} fill="currentColor" />
           </button>
         ) : (
-          <button className="btn primary" onClick={send} disabled={!text.trim()}>
-            {t.send}
+          <button className="sendbtn" onClick={send} disabled={!text.trim()} title={t.send}>
+            <ArrowUp size={18} strokeWidth={2.5} />
           </button>
         )}
       </div>

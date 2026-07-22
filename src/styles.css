@@ -219,9 +219,10 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .composer-wrap { border-top: 1px solid var(--border); flex: none; position: relative; background: var(--bg); }
 .composer { display: flex; gap: 8px; padding: 8px 12px 12px; align-items: flex-end; }
 .composer textarea {
-  flex: 1; resize: none; border: 1px solid var(--border-strong); border-radius: var(--radius);
-  font-family: var(--font); font-size: 13px; padding: 8px 12px; min-height: 38px; max-height: 140px;
+  flex: 1; resize: none; border: 1px solid var(--border-strong); border-radius: 18px;
+  font-family: var(--font); font-size: 13px; padding: 8px 14px; min-height: 36px; max-height: 140px;
   outline: none; line-height: 1.4; background: var(--bg-elevated); color: var(--text);
+  overflow-y: auto;
 }
 .composer textarea::placeholder { color: var(--text-dim); }
 .composer textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
@@ -246,8 +247,21 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 }
 .chip-x:hover { opacity: 1; background: var(--accent-soft); }
 .queued-chip .chip-x:hover { background: var(--border); }
-.iconbtn.globe { align-self: flex-end; padding: 9px 7px; }
-.iconbtn.globe.active { color: var(--accent); background: var(--accent-soft); }
+/* 36px round controls, bottom-aligned with the (36px single-line) textarea */
+.sendbtn {
+  flex: none; width: 36px; height: 36px; border-radius: 999px; border: none;
+  background: var(--primary); color: var(--on-primary); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; align-self: flex-end;
+}
+.sendbtn:hover:not(.stop) { background: var(--primary-hover); }
+.sendbtn:disabled { opacity: 0.35; cursor: default; }
+.sendbtn.stop { background: var(--danger); }
+.sendbtn.stop:hover { filter: brightness(1.1); }
+.iconbtn.globe {
+  flex: none; width: 36px; height: 36px; border-radius: 999px; padding: 0;
+  align-self: flex-end; border: 1px solid var(--border-strong);
+}
+.iconbtn.globe.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
 .iconbtn.globe:disabled { opacity: 0.35; cursor: default; background: none; }
 
 /* ============================== settings ============================== */
@@ -303,14 +317,14 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 
 /* ============================== motion ============================== */
 @media (prefers-reduced-motion: no-preference) {
-  .btn, .iconbtn, .option, .queued-chip, .skill-pill, .chip-x, .status {
+  .btn, .iconbtn, .sendbtn, .option, .queued-chip, .skill-pill, .chip-x, .status {
     transition: background-color 150ms ease-out, border-color 150ms ease-out,
       color 150ms ease-out, opacity 150ms ease-out;
   }
   .composer textarea, .field input, .field select, .field textarea, .pendingbar input, .actions input {
     transition: border-color 150ms ease-out, box-shadow 150ms ease-out;
   }
-  .btn:active:not(:disabled), .iconbtn:active:not(:disabled) { transform: scale(0.96); }
+  .btn:active:not(:disabled), .iconbtn:active:not(:disabled), .sendbtn:active:not(:disabled) { transform: scale(0.96); }
   .popover.slash-menu { animation: slash-rise 160ms ease-out; }
   @keyframes slash-rise {
     from { opacity: 0; transform: translateY(4px); }
