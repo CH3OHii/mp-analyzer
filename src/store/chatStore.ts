@@ -48,9 +48,18 @@ export interface ChatState {
   streaming: boolean;
   usage: { prompt: number; completion: number };
   pendingCardId: number | null;
+  /** Messages submitted while a turn is running — dispatched FIFO at turn end.
+   *  Kept OUT of llmHistory until dispatch (trimHistory tail protection). */
+  queued: string[];
 }
 
-let state: ChatState = { items: [], streaming: false, usage: { prompt: 0, completion: 0 }, pendingCardId: null };
+let state: ChatState = {
+  items: [],
+  streaming: false,
+  usage: { prompt: 0, completion: 0 },
+  pendingCardId: null,
+  queued: [],
+};
 
 /** The LLM-side conversation (system message composed separately per request). */
 export const llmHistory: ChatMessage[] = [];
@@ -81,8 +90,26 @@ export function useChat(): ChatState {
 export function resetChat(): void {
   stopTurn();
   llmHistory.length = 0;
-  state = { items: [], streaming: false, usage: { prompt: 0, completion: 0 }, pendingCardId: null };
+  state = { items: [], streaming: false, usage: { prompt: 0, completion: 0 }, pendingCardId: null, queued: [] };
   notify();
+}
+
+export function enqueue(text: string): void {
+  state = { ...state, queued: [...state.queued, text] };
+  notify();
+}
+
+export function removeQueuedAt(index: number): void {
+  state = { ...state, queued: state.queued.filter((_, i) => i !== index) };
+  notify();
+}
+
+export function dequeue(): string | undefined {
+  if (!state.queued.length) return undefined;
+  const [head, ...rest] = state.queued;
+  state = { ...state, queued: rest };
+  notify();
+  return head;
 }
 
 export function addUser(text: string): number {

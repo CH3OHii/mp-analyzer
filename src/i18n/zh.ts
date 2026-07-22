@@ -89,4 +89,6 @@ export const zh: Dict = {
   sevHigh: "高",
   sevMedium: "中",
   sevLow: "低",
+  queuedHint: "已排队 — 本轮结束后自动发送。",
+  removeQueued: "移出队列",
 };

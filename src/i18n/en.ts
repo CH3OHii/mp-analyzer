@@ -88,5 +88,7 @@ export const en = {
   sevHigh: "high",
   sevMedium: "medium",
   sevLow: "low",
+  queuedHint: "Queued — sends automatically when the agent finishes this turn.",
+  removeQueued: "Remove from queue",
 };
 export type Dict = typeof en;

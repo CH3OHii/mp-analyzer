@@ -158,7 +158,20 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 /* ---------- composer / status ---------- */
 .statusbar { display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 11px; flex: none; }
 .statusbar .spacer { flex: 1; }
-.composer { display: flex; gap: 8px; padding: 8px 10px 10px; border-top: 1px solid var(--border); flex: none; align-items: flex-end; }
+.composer-wrap { border-top: 1px solid var(--border); flex: none; position: relative; }
+.composer { display: flex; gap: 8px; padding: 8px 10px 10px; align-items: flex-end; }
+.queue-row { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px 0; }
+.queued-chip {
+  display: inline-flex; align-items: center; gap: 4px; max-width: 100%;
+  border: 1px dashed var(--border); background: var(--bg-alt); border-radius: 999px;
+  padding: 2px 4px 2px 10px; font-size: 12px; color: var(--text-dim);
+}
+.queued-chip .chip-text { max-width: 220px; }
+.chip-x {
+  border: none; background: none; cursor: pointer; padding: 2px; border-radius: 999px;
+  color: var(--text-dim); display: inline-flex; align-items: center;
+}
+.chip-x:hover { background: var(--border); color: var(--text); }
 .composer textarea {
   flex: 1; resize: none; border: 1px solid var(--border); border-radius: var(--radius);
   font-family: var(--font); font-size: 13px; padding: 8px 10px; min-height: 38px; max-height: 140px;

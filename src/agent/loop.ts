@@ -26,7 +26,10 @@ function targetOf(args: Record<string, unknown>): string | undefined {
 /** Extra iterations granted for a bounded repair round after audit/verifier findings. */
 const REPAIR_CREDITS = 3;
 
-export async function runTurn(userText: string): Promise<void> {
+/** How a turn ended — the queue dispatcher drains only after "done". */
+export type TurnOutcome = "done" | "stopped" | "error";
+
+export async function runTurn(userText: string): Promise<TurnOutcome> {
   const settings = getSettings();
   const t = dict(settings.language);
   const llm = effectiveLlm(settings);
@@ -34,7 +37,7 @@ export async function runTurn(userText: string): Promise<void> {
   chat.addUser(userText);
   if (!llm.apiKey) {
     chat.addError(t.noKeyError);
-    return;
+    return "error";
   }
 
   const controller = new AbortController();
@@ -165,7 +168,7 @@ export async function runTurn(userText: string): Promise<void> {
             chat.addVerify("pass", []);
           }
         }
-        return; // final answer
+        return "done"; // final answer
       }
 
       for (const tc of res.toolCalls) {
@@ -274,6 +277,9 @@ export async function runTurn(userText: string): Promise<void> {
       }
     }
     chat.addNotice(t.maxItersReached);
+    // Max-iters is a soft stop ("send another message to continue") — treat as
+    // "done" so a queued follow-up dispatches, which is exactly continuing.
+    return "done";
   } catch (e) {
     if (e instanceof DOMException && e.name === "AbortError") {
       // An abort mid-repair can leave a trailing injected repair prompt in
@@ -287,9 +293,10 @@ export async function runTurn(userText: string): Promise<void> {
         chat.llmHistory.pop();
       }
       chat.addNotice(t.stopped);
-    } else {
-      chat.addError(e instanceof Error ? e.message : String(e));
+      return "stopped";
     }
+    chat.addError(e instanceof Error ? e.message : String(e));
+    return "error";
   } finally {
     chat.setStreaming(false);
   }
