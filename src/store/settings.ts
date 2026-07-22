@@ -25,6 +25,8 @@ export interface AppSettings {
   analysisPresetId: string | null;
   styleLayerOn: boolean;
   customPresets: CustomPreset[];
+  /** Provider-native web search (Kimi/GLM/Qwen). Ignored where unsupported. */
+  webSearchOn: boolean;
 }
 
 const KEY = "mp-analyzer-settings-v1";
@@ -50,6 +52,7 @@ function defaults(): AppSettings {
     analysisPresetId: null,
     styleLayerOn: false,
     customPresets: [],
+    webSearchOn: false,
   };
 }
 

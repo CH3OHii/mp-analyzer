@@ -132,6 +132,7 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
+          <div className="hint">{t.webSearchProviderHint}</div>
         </div>
         <div className="field">
           <label>{t.baseUrl}</label>

@@ -12,8 +12,9 @@ import * as chat from "../store/chatStore";
 import { effectiveLlm, getSettings } from "../store/settings";
 import { dedupeRanges, formatAuditForModel, runAudit, type AuditRun, type MutatedRange } from "./audit";
 import { estimateTokens, trimHistory } from "./history";
-import { composeSystemPrompt } from "./systemPrompt";
+import { composeSystemPrompt, webSearchAvailable } from "./systemPrompt";
 import { buildRepairMessage, runVerifierPass } from "./verifier";
+import { buildWebSearchEcho, displayQuery, isWebSearchCall } from "./webSearch";
 
 function targetOf(args: Record<string, unknown>): string | undefined {
   const parts: string[] = [];
@@ -45,6 +46,7 @@ export async function runTurn(userText: string): Promise<TurnOutcome> {
   let turnAutoApply = settings.autoApply;
   const quirks = getPreset(llm.providerId).quirks;
   const tools = hasExcel() ? toolDefs() : undefined; // browser preview = plain chat
+  const webSearch = webSearchAvailable(settings); // search works even tool-less (server-side)
 
   // Live workbook context (active sheet + selection + sheet list) — refreshed
   // EVERY iteration, because the model itself activates/adds sheets mid-turn.
@@ -101,6 +103,7 @@ export async function runTurn(userText: string): Promise<TurnOutcome> {
           quirks,
           messages,
           tools,
+          webSearch,
           signal: controller.signal,
           onEvent: (ev) => {
             if (ev.type === "text") chat.appendAssistant(aid, { text: ev.delta });
@@ -172,6 +175,24 @@ export async function runTurn(userText: string): Promise<TurnOutcome> {
       }
 
       for (const tc of res.toolCalls) {
+        // Kimi $web_search: echo the arguments back VERBATIM (no repair, no
+        // validation, no clipping — the provider parses its own payload) and
+        // let the next iteration deliver the server-side search results.
+        if (isWebSearchCall(tc.function.name)) {
+          const query = displayQuery(tc.function.arguments);
+          const cardId = chat.addToolCard({
+            callId: tc.id,
+            name: tc.function.name,
+            argsRaw: tc.function.arguments,
+            status: "running",
+            target: query,
+            mutating: "no",
+          });
+          chat.llmHistory.push(buildWebSearchEcho(tc));
+          chat.patchToolCard(cardId, { status: "done" });
+          opsLog.push(`$web_search${query ? ` "${query}"` : ""} → ok`);
+          continue;
+        }
         const tool = getTool(tc.function.name);
         const parsed = repairToolArgs(tc.function.arguments);
         const args = parsed.ok ? parsed.value : {};

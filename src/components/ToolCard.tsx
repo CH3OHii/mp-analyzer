@@ -3,6 +3,7 @@ import {
   ChartColumn,
   Crosshair,
   Eye,
+  Globe,
   Layers,
   Map,
   Paintbrush,
@@ -32,6 +33,7 @@ const ICON: Record<string, LucideIcon> = {
   create_chart: ChartColumn,
   manage_sheet: Layers,
   insert_delete: ArrowUpDown,
+  $web_search: Globe,
 };
 
 export default function ToolCard({ card, isPendingActive }: { card: ToolCardModel; isPendingActive: boolean }) {
@@ -69,7 +71,7 @@ export default function ToolCard({ card, isPendingActive }: { card: ToolCardMode
     <div className="toolcard">
       <div className="head" onClick={() => setOpen((v) => !v)}>
         <Icon size={14} className="ticon" />
-        <span className="name">{card.name}</span>
+        <span className="name">{card.name === "$web_search" ? t.webSearchTool : card.name}</span>
         <span className="target">
           {card.target ?? ""}
           {card.preview?.cells ? ` · ${card.preview.cells} ${t.cells}` : ""}

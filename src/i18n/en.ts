@@ -92,5 +92,11 @@ export const en = {
   removeQueued: "Remove from queue",
   skillPillClear: "Deactivate",
   styleLayerPill: "Styling",
+  webSearchTool: "web search",
+  webSearchOnTip: "Web search ON — the model can look up live policy, launch, price, and market info.",
+  webSearchOffTip: "Web search off — click to let the model search the internet.",
+  webSearchUnsupported: "This provider has no native web search (Kimi, GLM, and Qwen do).",
+  webSearchQwenHint: "Note: on Qwen, search works best with qwen-plus; qwen3-max may need thinking mode.",
+  webSearchProviderHint: "Web search (globe button next to Send) is available on Kimi, GLM, and Qwen.",
 };
 export type Dict = typeof en;

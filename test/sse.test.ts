@@ -109,4 +109,38 @@ describe("SseAccumulator", () => {
     const events = collect(new SseAccumulator(), ": ping\n\n", "data: {broken json\n\n", textDelta("ok"));
     expect(textOf(events)).toBe("ok");
   });
+
+  it("preserves builtin_function type and byte-identical arguments (Kimi $web_search)", () => {
+    const args1 = '{"query":"2026 NEV 购置税 政策",';
+    const args2 = '"extra":"”quotes“"}';
+    const events = collect(
+      new SseAccumulator(),
+      ev({
+        choices: [
+          {
+            delta: {
+              tool_calls: [
+                { index: 0, id: "ws1", type: "builtin_function", function: { name: "$web_search", arguments: args1 } },
+              ],
+            },
+          },
+        ],
+      }),
+      ev({ choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: args2 } }] } }] }),
+      ev({ choices: [{ delta: {}, finish_reason: "tool_calls" }] })
+    );
+    const tc = events.find((e) => e.type === "tool_calls") as any;
+    expect(tc.calls).toHaveLength(1);
+    expect(tc.calls[0].type).toBe("builtin_function");
+    expect(tc.calls[0].function.arguments).toBe(args1 + args2);
+  });
+
+  it("defaults tool-call type to function when the stream omits it", () => {
+    const events = collect(
+      new SseAccumulator(),
+      ev({ choices: [{ delta: { tool_calls: [{ index: 0, id: "c1", function: { name: "find", arguments: "{}" } }] } }] })
+    );
+    const tc = events.find((e) => e.type === "tool_calls") as any;
+    expect(tc.calls[0].type).toBe("function");
+  });
 });

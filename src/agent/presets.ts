@@ -19,11 +19,11 @@ export interface Preset {
 /** Skills were written for a different runtime (Claude Code with web search,
  *  openpyxl, subagents), so each gets a load-bearing adaptation preamble. */
 const GENERIC_NOTE =
-  "Adaptation for this Excel runtime: any reference files, web search, subagents, or file-writing this skill assumes are NOT available. Ask the user to paste data you cannot find, or read it from the open workbook. Deliver analysis into the workbook (formulas, not constants) and summarize in chat.";
+  "Adaptation for this Excel runtime: any reference files, subagents, or file-writing this skill assumes are NOT available. Web search is available ONLY when a '# Web search' section appears at the end of this prompt — otherwise ask the user to paste data you cannot find, or read it from the open workbook. Deliver analysis into the workbook (formulas, not constants) and summarize in chat.";
 
 const NOTES: Record<string, string> = {
   "nev-sales-diagnostic":
-    "Adaptation for this Excel runtime: the reference files this skill mentions (references/policy-calendar.md, references/data-sources.md) are NOT available, and you have NO web search. Where the skill says to search or consult references, instead ask the user to paste the data, or read it from the open workbook. Deliver analysis into the workbook (formulas, not constants) and summarize in chat.",
+    "Adaptation for this Excel runtime: the reference files this skill mentions (references/policy-calendar.md, references/data-sources.md) are NOT available. Web search is available ONLY when a '# Web search' section appears at the end of this prompt; where it is absent and the skill says to search or consult references, ask the user to paste the data, or read it from the open workbook. Deliver analysis into the workbook (formulas, not constants) and summarize in chat.",
   "business-analysis":
     "Adaptation for this Excel runtime: the references/ files this skill mentions are NOT available. You have no AskUserQuestion tool and no subagents — ask questions as plain chat messages, skip any subagent-review phase, and deliver output in chat or into the workbook instead of writing files.",
   "excel-report-style":

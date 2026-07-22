@@ -1,6 +1,6 @@
 import { fetchWithRetry } from "./retry";
 import { SseAccumulator } from "./sse";
-import type { ChatMessage, LlmSettings, ProviderQuirks, StreamEvent, ToolCall, ToolDef } from "./types";
+import type { ChatMessage, LlmSettings, ProviderQuirks, StreamEvent, ToolCall, ToolDef, WireTool } from "./types";
 
 export interface StreamResult {
   text: string;
@@ -17,7 +17,9 @@ export function effectiveBaseUrl(s: Pick<LlmSettings, "baseUrl" | "useProxy" | "
   return s.proxyUrl.replace(/\/+$/, "") + "/" + base;
 }
 
-/** Strip display-only fields; providers 400 on unknown keys like `reasoning`. */
+/** Strip display-only fields; providers 400 on unknown keys like `reasoning`.
+ *  tool_calls / tool_call_id / content pass through untouched — the Kimi
+ *  $web_search echo depends on exactly that. */
 export function sanitizeMessages(messages: ChatMessage[]): Record<string, unknown>[] {
   return messages.map((m) => {
     const out: Record<string, unknown> = { role: m.role, content: m.content ?? "" };
@@ -27,14 +29,14 @@ export function sanitizeMessages(messages: ChatMessage[]): Record<string, unknow
   });
 }
 
-export async function streamChat(opts: {
+/** Pure request-body assembly — the unit-testable seam under streamChat. */
+export function buildRequestBody(opts: {
   settings: LlmSettings;
   quirks: ProviderQuirks;
   messages: ChatMessage[];
   tools?: ToolDef[];
-  signal?: AbortSignal;
-  onEvent?: (ev: StreamEvent) => void;
-}): Promise<StreamResult> {
+  webSearch?: boolean;
+}): Record<string, unknown> {
   const { settings: s, quirks } = opts;
   // Least-common-denominator body; quirk flags add the rest per provider.
   const body: Record<string, unknown> = {
@@ -44,12 +46,39 @@ export async function streamChat(opts: {
     temperature: s.temperature,
     max_tokens: s.maxTokens,
   };
-  if (opts.tools?.length) {
-    body.tools = opts.tools;
-    body.tool_choice = "auto";
-  }
   if (quirks.supportsStreamOptionsUsage) body.stream_options = { include_usage: true };
   if (quirks.extraBody) Object.assign(body, quirks.extraBody);
+
+  const wireTools: WireTool[] = [...(opts.tools ?? [])];
+  if (opts.webSearch && quirks.webSearch === "kimi-builtin") {
+    wireTools.push({ type: "builtin_function", function: { name: "$web_search" } });
+  } else if (opts.webSearch && quirks.webSearch === "glm-tool") {
+    wireTools.push({ type: "web_search", web_search: { enable: true, search_result: true } });
+  } else if (opts.webSearch && quirks.webSearch === "qwen-flag") {
+    // AFTER the extraBody merge, so enable_thinking:false can't clobber these.
+    body.enable_search = true;
+    body.search_options = { forced_search: false };
+  }
+  if (wireTools.length) {
+    body.tools = wireTools;
+    // Some providers reject tool_choice when no function tool is present
+    // (e.g. GLM with only a web_search entry) — send it only when one is.
+    if (wireTools.some((t) => t.type === "function")) body.tool_choice = "auto";
+  }
+  return body;
+}
+
+export async function streamChat(opts: {
+  settings: LlmSettings;
+  quirks: ProviderQuirks;
+  messages: ChatMessage[];
+  tools?: ToolDef[];
+  webSearch?: boolean;
+  signal?: AbortSignal;
+  onEvent?: (ev: StreamEvent) => void;
+}): Promise<StreamResult> {
+  const { settings: s } = opts;
+  const body = buildRequestBody(opts);
 
   // Transient 429/5xx/network failures retry with backoff. Retries only happen
   // here, before the body reader exists — a stream that already started fails loud.

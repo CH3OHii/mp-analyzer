@@ -2,6 +2,7 @@ import type { StreamEvent, ToolCall } from "./types";
 
 interface PartialCall {
   id: string;
+  type: string;
   name: string;
   args: string;
 }
@@ -53,7 +54,9 @@ export class SseAccumulator {
       .sort((a, b) => a[0] - b[0])
       .map(([index, c]) => ({
         id: c.id || `call_${index}`,
-        type: "function" as const,
+        // Preserve the streamed type: Kimi's $web_search arrives as
+        // "builtin_function", and replaying it as "function" breaks the echo.
+        type: (c.type === "builtin_function" ? "builtin_function" : "function") as ToolCall["type"],
         function: { name: c.name, arguments: c.args },
       }))
       .filter((c) => c.function.name);
@@ -126,10 +129,11 @@ export class SseAccumulator {
 
     let slot = this.calls.get(index);
     if (!slot) {
-      slot = { id: "", name: "", args: "" };
+      slot = { id: "", type: "", name: "", args: "" };
       this.calls.set(index, slot);
     }
     if (typeof tc?.id === "string" && tc.id) slot.id = tc.id;
+    if (typeof tc?.type === "string" && tc.type) slot.type = tc.type;
     const fn = tc?.function ?? {};
     if (typeof fn.name === "string" && fn.name) {
       if (!slot.name) slot.name = fn.name;

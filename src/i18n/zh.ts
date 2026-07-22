@@ -93,4 +93,10 @@ export const zh: Dict = {
   removeQueued: "移出队列",
   skillPillClear: "取消激活",
   styleLayerPill: "报表美化",
+  webSearchTool: "联网搜索",
+  webSearchOnTip: "联网搜索已开启 — 模型可查询最新政策、新车发布、价格与市场信息。",
+  webSearchOffTip: "联网搜索已关闭 — 点击后模型可搜索互联网。",
+  webSearchUnsupported: "当前服务商不支持原生联网搜索（Kimi、GLM、Qwen 支持）。",
+  webSearchQwenHint: "注意：Qwen 建议使用 qwen-plus；qwen3-max 可能需要开启思考模式。",
+  webSearchProviderHint: "联网搜索（发送按钮旁的地球图标）支持 Kimi、GLM、Qwen。",
 };

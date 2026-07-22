@@ -9,7 +9,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     baseUrls: ["https://api.moonshot.cn/v1", "https://api.moonshot.ai/v1"],
     defaultModel: "kimi-k2-0905-preview",
     models: ["kimi-k2-0905-preview", "kimi-k2-turbo-preview", "kimi-latest"],
-    quirks: { supportsStreamOptionsUsage: true },
+    quirks: { supportsStreamOptionsUsage: true, webSearch: "kimi-builtin" },
     price: { input: 0.6, output: 2.5 },
   },
   {
@@ -27,7 +27,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     baseUrls: ["https://open.bigmodel.cn/api/paas/v4"],
     defaultModel: "glm-4.6",
     models: ["glm-4.6", "glm-4.5", "glm-4.5-air"],
-    quirks: { supportsStreamOptionsUsage: false },
+    quirks: { supportsStreamOptionsUsage: false, webSearch: "glm-tool" },
     price: { input: 0.6, output: 2.2 },
   },
   {
@@ -39,7 +39,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ],
     defaultModel: "qwen3-max",
     models: ["qwen3-max", "qwen-plus", "qwen-flash"],
-    quirks: { supportsStreamOptionsUsage: true, extraBody: { enable_thinking: false } },
+    quirks: { supportsStreamOptionsUsage: true, extraBody: { enable_thinking: false }, webSearch: "qwen-flag" },
     price: { input: 1.2, output: 6 },
   },
   {

@@ -1,5 +1,11 @@
+import { getPreset } from "../llm/providers";
 import type { AppSettings } from "../store/settings";
 import { resolveAnalysisPresets, styleLayerPreset } from "./presets";
+
+/** True when the toggle is on AND the current provider can actually search. */
+export function webSearchAvailable(s: AppSettings): boolean {
+  return s.webSearchOn && !!getPreset(s.llm.providerId).quirks.webSearch;
+}
 
 export function baseSystemPrompt(lang: "en" | "zh"): string {
   const replyLang = lang === "zh" ? "Chinese" : "English";
@@ -34,8 +40,9 @@ export function baseSystemPrompt(lang: "en" | "zh"): string {
 - Be concise. Use markdown tables for comparisons. After edits, state exactly which sheets/ranges you touched.`;
 }
 
-/** Fixed composition order (base → analysis skill → style layer) keeps a stable
- *  prompt prefix, which maximizes provider-side prefix-cache hits. */
+/** Fixed composition order (base → analysis skill → style layer → web search)
+ *  keeps a stable prompt prefix, which maximizes provider-side prefix-cache
+ *  hits — the web-search section is last because it is the most toggled. */
 export function composeSystemPrompt(s: AppSettings): string {
   let out = baseSystemPrompt(s.language);
   const analysis = s.analysisPresetId
@@ -48,6 +55,13 @@ export function composeSystemPrompt(s: AppSettings): string {
   }
   if (s.styleLayerOn && styleLayerPreset) {
     out += `\n\n# Report styling layer\n${styleLayerPreset.adaptationNote}\n\n${styleLayerPreset.body}`;
+  }
+  if (webSearchAvailable(s)) {
+    out += `\n\n# Web search
+Live web search is ENABLED for this session. Use it for time-sensitive or out-of-workbook facts — policy changes, product launches, price moves, market data, competitor news — and whenever the user asks about current events. Rules:
+- Cite the source name and date for every externally sourced figure, and state the data vintage ("as of ...").
+- Never fabricate URLs, publication names, or numbers; if search returns nothing usable, say so.
+- Workbook data outranks search results when both exist — search complements the user's data, never silently replaces it.`;
   }
   return out;
 }
