@@ -64,3 +64,49 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
     ~3 backoff attempts fail; restore network mid-backoff → the turn proceeds.
 21. **Stop during verification** — hit Stop while the "AI review" call is in flight →
     turn aborts cleanly ("Stopped."), no verify card, no stuck spinner.
+
+## Upgrade round 2 (queue, slash picker, web search, builtin skills, dark UI)
+
+22. ★ **Queue during a multi-tool turn** — while the agent is mid-turn, send two more
+    messages (Enter) → they appear as dashed chips above the composer; when the turn
+    ends normally they dispatch FIFO, one turn each. × on a chip removes only it.
+23. ★ **Queue survives Stop / error** — queue a message, hit Stop → "Stopped." and the
+    chip STAYS queued (nothing auto-dispatches). Same after an API error. Sending a
+    new message afterwards resumes the queue in order (older first).
+24. **Queue + approval gate** — queue a message while a PendingBar approval is showing
+    → approving/rejecting proceeds normally; the queued message dispatches only after
+    the whole turn (including audit/verify) finishes.
+25. ★ **Slash picker, both hosts** — type "/" as the first character → menu opens above
+    the composer listing None + five built-in skills (+ private/custom ones); filter
+    by typing (EN substring, 中文子串, or slug); ArrowUp/Down wrap, Enter/Tab pick,
+    Esc dismisses. Selection shows a teal pill; × clears it.
+26. ★ **Slash picker with Chinese IME** (Windows WebView2 AND Mac WKWebView) — with
+    pinyin composition open, Enter confirms the composition and does NOT pick/send;
+    arrows navigate IME candidates, not menu rows. "/" typed mid-composition does not
+    open the menu.
+27. **New-chat clears the queue** — queue two messages, press + (new chat) → chips
+    gone, nothing dispatches.
+28. ★ **Web search per provider** (globe button next to Send):
+    - Kimi: ask "今天新能源购置税政策有什么新变化" with globe ON → a 联网搜索 tool
+      card appears with the query; final answer cites source names + dates. Round-trip
+      completes (no dangling tool call), audit/verify still run on Excel edits.
+    - GLM: same question → no tool card (server-side), but the answer reflects fresh
+      info. No HTTP 400 (tool_choice guard).
+    - Qwen: test on qwen-plus; on qwen3-max note whether search fires (thinking-mode
+      caveat) — record result here.
+    - DeepSeek/MiniMax: globe is disabled with an explanatory tooltip.
+    - Globe OFF: system prompt has no "# Web search" section; model asks for data
+      instead of claiming to search.
+29. **Built-in skills** — activate each of the five via "/" and run a small real task
+    → skill conventions hold: Inputs/Calc/Output separation, live formulas (no pasted
+    constants), assumption cells highlighted, KEY INSIGHTS block, checks block; the
+    turn-end audit and AI review still pass; Revert All is still LIFO-clean.
+30. **Private-skill override** — drop a local skills/ev-industry-analyst.md → the
+    picker shows YOUR version (not the shipped one); delete it → shipped one returns.
+    `git status` stays clean both times.
+31. ★ **Dark mode in Excel** — set OS dark appearance (Windows AND Mac) → pane follows:
+    dark surfaces, readable user bubble, markdown tables/code blocks, tool cards +
+    status pills, verify pass/issues cards, preview diff grid, pending bar, error
+    banner, settings inputs. Toggle back to light live.
+32. **Personality-menu clearance** — with the restyle, Excel's ⓘ button still doesn't
+    overlap the top-bar icons or the Settings ✕ on either host.
