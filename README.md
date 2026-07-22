@@ -10,11 +10,29 @@ scenario tables, formatting, conditional formats, charts. Every mutation is
 one-click revert** — programmatic edits bypass Excel's own Ctrl+Z, so the add-in
 brings its own undo stack.
 
-**Analysis skills are yours to supply.** Drop any `*.md` framework into `skills/` and it
-becomes a selectable preset in the pane (bundled at build time); or paste one into
-**Settings → Custom analysis presets** for no-rebuild use. The folder ships empty and is
-gitignored, so private methodology never lands in the repo — see
+**Five analyst skills ship built-in** (in [skills/builtin/](skills/builtin)): market
+sizing & forecasting, KPI variance decomposition (bridges/waterfalls), data cleaning &
+validation, competitive & financial benchmarking, and an EV industry senior analyst that
+combines policy changes, launch calendars, pricing moves, and registration data into one
+attribution — with web search when the provider supports it. Activate any of them by
+typing **`/`** in the composer (Claude Code-style picker; the active skill shows as a
+removable pill above the input).
+
+**Your own skills stay private.** Drop any `*.md` framework into the top-level `skills/`
+folder and it becomes a selectable preset too (bundled at build time, gitignored, and it
+overrides a shipped skill with the same filename); or paste one into
+**Settings → Custom analysis presets** for no-rebuild use. See
 [skills/README.md](skills/README.md).
+
+**Queue while it works.** Sending a message while the agent is mid-turn queues it
+(chips above the composer, removable); queued messages dispatch in order when the turn
+finishes cleanly, and stay put after a Stop or an error.
+
+**Web search** (globe button next to Send) uses each provider's native mechanism —
+Kimi `$web_search`, GLM `web_search`, Qwen `enable_search` — entirely from the pane, no
+extra keys. DeepSeek and MiniMax have no native search, so the toggle is disabled there.
+On Qwen, search works best with `qwen-plus` (on `qwen3-max` it may require thinking
+mode). The UI follows your OS light/dark appearance.
 
 ### Verification pipeline
 
@@ -244,7 +262,7 @@ not heal, and restoring a deleted sheet loses rich styling beyond number formats
 | **Auto-apply changes** | Skip approval for normal writes; destructive ops still ask |
 | **Max agent steps per turn** | Default 15; raise for long multi-step builds |
 | **Context budget (tokens)** | Default 32000; old tool results are elided before whole exchanges are dropped |
-| **Analysis skill** | Injects a `skills/*.md` framework, or one of your custom presets, into the system prompt |
+| **Analysis skill** (type `/` in the composer) | Injects a shipped `skills/builtin/*.md` skill, your own `skills/*.md` framework, or a custom preset into the system prompt |
 
 **API keys** are stored per-provider in the pane's **localStorage only**. They are never
 written into the repo and never into workbook files — a deliberate choice, because
@@ -288,6 +306,7 @@ src/agent      — agent loop (stream → tools → approval → verify), audit,
 src/store      — settings (localStorage) + chat store (approval gating lives here)
 src/components — task-pane UI (React 19, no UI framework)
 skills/        — your own SKILL.md frameworks, bundled at build time (gitignored)
+skills/builtin — five shipped analyst skills (committed; same-name private file wins)
 proxy/         — optional zero-dep CORS fallback proxy
 docs/          — CORS matrix + manual E2E checklist
 ```

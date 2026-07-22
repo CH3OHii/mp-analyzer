@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { filterPresets, mergeSkillSources, type Preset, type SkillSource } from "../src/agent/presets";
+import {
+  builtinAnalysisPresets,
+  filterPresets,
+  mergeSkillSources,
+  resolveAnalysisPresets,
+  type Preset,
+  type SkillSource,
+} from "../src/agent/presets";
 
 function p(id: string, nameEn: string, nameZh: string): Preset {
   return { id, nameEn, nameZh, source: "builtin", body: "b", adaptationNote: "", approxTokens: 1 };
@@ -52,5 +59,43 @@ describe("mergeSkillSources", () => {
     expect(mergeSkillSources([], [src("a", "1")])).toHaveLength(1);
     expect(mergeSkillSources([src("a", "1")], [])).toHaveLength(1);
     expect(mergeSkillSources([], [])).toEqual([]);
+  });
+});
+
+// Subset assertions only — developers may have extra private skills in the
+// top-level skills/ dir, so never assert exact list equality.
+describe("shipped builtin skills", () => {
+  const SHIPPED = [
+    "market-sizing-forecasting",
+    "kpi-variance-decomposition",
+    "data-cleaning-validation",
+    "competitive-financial-benchmarking",
+    "ev-industry-analyst",
+  ];
+
+  it("all five resolve with bilingual names, a note, and a token estimate", () => {
+    for (const slug of SHIPPED) {
+      const p = builtinAnalysisPresets.find((x) => x.id === slug);
+      expect(p, slug).toBeDefined();
+      expect(p!.nameEn.length).toBeGreaterThan(0);
+      expect(p!.nameZh).not.toBe(p!.nameEn); // real Chinese name, not a fallback
+      expect(p!.adaptationNote.length).toBeGreaterThan(50);
+      expect(p!.approxTokens).toBeGreaterThan(0);
+    }
+  });
+
+  it("frontmatter is stripped from bodies", () => {
+    for (const slug of SHIPPED) {
+      const p = builtinAnalysisPresets.find((x) => x.id === slug)!;
+      expect(p.body.startsWith("---")).toBe(false);
+      expect(p.body).not.toContain("name_en:");
+      expect(p.body.startsWith("#")).toBe(true);
+    }
+  });
+
+  it("README is never a preset and custom presets sort after builtins", () => {
+    const all = resolveAnalysisPresets([{ id: "c1", nameEn: "C", nameZh: "C", body: "b" }]);
+    expect(all.some((p) => p.id.toLowerCase() === "readme")).toBe(false);
+    expect(all[all.length - 1].id).toBe("c1");
   });
 });
