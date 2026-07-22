@@ -1,6 +1,6 @@
 export const en = {
   appTitle: "MP Analyzer",
-  composerPlaceholder: "Ask about the workbook, or tell me what to build…",
+  composerPlaceholder: "Ask about the workbook — type / to pick a skill…",
   send: "Send",
   stop: "Stop",
   newChat: "New chat",
@@ -90,5 +90,7 @@ export const en = {
   sevLow: "low",
   queuedHint: "Queued — sends automatically when the agent finishes this turn.",
   removeQueued: "Remove from queue",
+  skillPillClear: "Deactivate",
+  styleLayerPill: "Styling",
 };
 export type Dict = typeof en;

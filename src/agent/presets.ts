@@ -71,6 +71,9 @@ function mk(slug: string, body: string): Preset {
 
 const bundled = Object.entries(rawSkills)
   .map(([path, body]) => ({ slug: slugOf(path), body }))
+  // skills/README.md is committed documentation, not a skill — it matches the
+  // glob because gitignore whitelists it.
+  .filter((s) => s.slug.toLowerCase() !== "readme")
   .sort((a, b) => a.slug.localeCompare(b.slug));
 
 export const builtinAnalysisPresets: Preset[] = bundled
@@ -82,6 +85,15 @@ export const styleLayerPreset: Preset | null = (() => {
   const style = bundled.find((s) => s.slug === STYLE_SLUG);
   return style ? mk(style.slug, style.body) : null;
 })();
+
+/** Slash-menu filter: case-insensitive substring over EN name, ZH name, and slug. */
+export function filterPresets(query: string, presets: Preset[]): Preset[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return presets;
+  return presets.filter(
+    (p) => p.nameEn.toLowerCase().includes(q) || p.nameZh.toLowerCase().includes(q) || p.id.toLowerCase().includes(q)
+  );
+}
 
 export function resolveAnalysisPresets(custom: CustomPreset[]): Preset[] {
   return [

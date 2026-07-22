@@ -2,7 +2,6 @@ import { useState } from "react";
 import Chat from "./components/Chat";
 import Composer from "./components/Composer";
 import PendingBar from "./components/PendingBar";
-import PresetPicker from "./components/PresetPicker";
 import SettingsPanel from "./components/SettingsPanel";
 import StatusBar from "./components/StatusBar";
 import TopBar from "./components/TopBar";
@@ -12,7 +11,6 @@ import { useT } from "./i18n";
 export default function App() {
   const t = useT();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const inExcel = hasExcel();
 
   if (inExcel && !apiSupported()) {
@@ -26,8 +24,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar onSettings={() => setSettingsOpen(true)} onPicker={() => setPickerOpen((v) => !v)} />
-      {pickerOpen && <PresetPicker onClose={() => setPickerOpen(false)} />}
+      <TopBar onSettings={() => setSettingsOpen(true)} />
       {!inExcel && <div className="notice">{t.browserPreviewNote}</div>}
       <Chat />
       <PendingBar />

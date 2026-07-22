@@ -8,6 +8,9 @@ import { join } from "node:path";
 // trusts a localhost cert (`npm run certs`, admin once). Until those cert files
 // exist we fall back to plain http so build/test tooling never blocks on a prompt.
 async function httpsOptions() {
+  // Escape hatch for browser-based previews whose trust store lacks the dev CA
+  // (Excel itself always needs the https server).
+  if (process.env.MP_NO_HTTPS) return undefined;
   const certDir = join(homedir(), ".office-addin-dev-certs");
   if (!existsSync(join(certDir, "localhost.crt"))) return undefined;
   const { getHttpsServerOptions } = await import("office-addin-dev-certs");

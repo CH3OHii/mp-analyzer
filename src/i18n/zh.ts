@@ -2,7 +2,7 @@ import type { Dict } from "./en";
 
 export const zh: Dict = {
   appTitle: "MP Analyzer",
-  composerPlaceholder: "询问工作簿内容，或告诉我要搭建什么…",
+  composerPlaceholder: "询问工作簿内容 — 输入 / 选择分析技能…",
   send: "发送",
   stop: "停止",
   newChat: "新对话",
@@ -91,4 +91,6 @@ export const zh: Dict = {
   sevLow: "低",
   queuedHint: "已排队 — 本轮结束后自动发送。",
   removeQueued: "移出队列",
+  skillPillClear: "取消激活",
+  styleLayerPill: "报表美化",
 };
