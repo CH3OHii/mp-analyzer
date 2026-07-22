@@ -112,6 +112,17 @@ export function dequeue(): string | undefined {
   return head;
 }
 
+/** Load a past conversation into the live store. `items` must already have been
+ *  run through sanitizeRestored() — restored tool cards carry no stepId, so the
+ *  current session's undo stack stays untouchable from historical cards. */
+export function restoreChat(items: ChatItem[], history: ChatMessage[], usage: ChatState["usage"]): void {
+  stopTurn();
+  llmHistory.length = 0;
+  llmHistory.push(...history);
+  state = { items, streaming: false, usage, pendingCardId: null, queued: [] };
+  notify();
+}
+
 export function addUser(text: string): number {
   const id = nextId++;
   state = { ...state, items: [...state.items, { kind: "user", id, text }] };

@@ -98,5 +98,14 @@ export const en = {
   webSearchUnsupported: "This provider has no native web search (Kimi, GLM, and Qwen do).",
   webSearchQwenHint: "Note: on Qwen, search works best with qwen-plus; qwen3-max may need thinking mode.",
   webSearchProviderHint: "Web search (globe button next to Send) is available on Kimi, GLM, and Qwen.",
+  history: "Chat history",
+  historyEmpty: "No past chats yet. Conversations are saved automatically when a turn finishes.",
+  historyBusy: "Finish or stop the current turn before opening a past chat.",
+  untitledChat: "(untitled)",
+  messagesCount: (n: number) => `${n} message${n === 1 ? "" : "s"}`,
+  deleteChat: "Delete",
+  confirmDelete: "Delete?",
+  clearAllHistory: "Clear all history",
+  confirmClearAll: "Delete every saved chat?",
 };
 export type Dict = typeof en;

@@ -28,6 +28,13 @@ overrides a shipped skill with the same filename); or paste one into
 (chips above the composer, removable); queued messages dispatch in order when the turn
 finishes cleanly, and stay put after a Stop or an error.
 
+**Chat history.** Conversations save automatically after every turn — including turns you
+stopped or that errored — and the clock icon in the top bar lists the last 50, each tagged
+with the workbook it was started against. Open one to read it *and continue it*: the
+model-side context is restored too. History lives in this pane's localStorage; restored
+tool cards are deliberately not revertable, since the undo stack belongs to the live
+Excel session.
+
 **Web search** (globe button next to Send) uses each provider's native mechanism —
 Kimi `$web_search`, GLM `web_search`, Qwen `enable_search` — entirely from the pane, no
 extra keys. DeepSeek and MiniMax have no native search, so the toggle is disabled there.

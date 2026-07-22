@@ -2,6 +2,7 @@
 // feeds runTurn one message at a time. Draining continues only across turns
 // that end "done" — a Stop or an error leaves the rest of the queue visible
 // and intact, so the user decides whether to resume (any new send resumes).
+import { saveCurrentChat } from "../store/chatHistory";
 import * as chat from "../store/chatStore";
 import type { TurnOutcome } from "./loop";
 
@@ -9,6 +10,8 @@ export interface DispatcherDeps {
   run(text: string): Promise<TurnOutcome>;
   enqueue(text: string): void;
   dequeue(): string | undefined;
+  /** Runs after every settled turn — done, stopped, or errored. */
+  onTurnSettled?: () => Promise<void>;
 }
 
 export function createDispatcher(deps: DispatcherDeps) {
@@ -25,6 +28,7 @@ export function createDispatcher(deps: DispatcherDeps) {
         const next = deps.dequeue();
         if (next === undefined) return;
         const outcome = await deps.run(next);
+        await deps.onTurnSettled?.();
         if (outcome !== "done") return; // stopped/error — keep remaining queue
       }
     } finally {
@@ -49,6 +53,9 @@ const dispatcher = createDispatcher({
   run: (text) => import("./loop").then((m) => m.runTurn(text)),
   enqueue: chat.enqueue,
   dequeue: chat.dequeue,
+  // Autosave here rather than inside runTurn: this fires for successful,
+  // stopped AND failed turns, so an interrupted conversation is recoverable.
+  onTurnSettled: () => saveCurrentChat(chat.getChat(), chat.llmHistory).catch(() => {}),
 });
 
 export const sendOrQueue = dispatcher.sendOrQueue;

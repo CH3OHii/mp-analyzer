@@ -283,6 +283,29 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .section-title { font-weight: 700; color: var(--brand-text); font-size: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
 .diag-result { font-family: var(--mono); font-size: 11px; white-space: pre-wrap; background: var(--bg-alt); border-radius: var(--radius-s); padding: 8px; }
 
+/* ---------- chat history ---------- */
+.histrow { display: flex; align-items: center; gap: 4px; }
+.histmain {
+  flex: 1; min-width: 0; text-align: left; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg-elevated); color: var(--text);
+  padding: 8px 10px; font-family: var(--font); font-size: 13px;
+}
+.histmain:hover:not(:disabled) { background: var(--bg-alt); border-color: var(--border-strong); }
+.histmain:disabled { opacity: 0.5; cursor: default; }
+.histtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.histmeta {
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  margin-top: 3px; font-size: 11px; color: var(--text-dim);
+}
+.wbbadge {
+  display: inline-flex; align-items: center; gap: 3px; max-width: 150px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 999px; padding: 1px 7px;
+}
+.wbbadge svg { flex: none; }
+
 .blocking { padding: 24px; text-align: center; color: var(--text-dim); }
 .blocking h2 { color: var(--danger); font-size: 15px; }
 

@@ -99,4 +99,13 @@ export const zh: Dict = {
   webSearchUnsupported: "当前服务商不支持原生联网搜索（Kimi、GLM、Qwen 支持）。",
   webSearchQwenHint: "注意：Qwen 建议使用 qwen-plus；qwen3-max 可能需要开启思考模式。",
   webSearchProviderHint: "联网搜索（发送按钮旁的地球图标）支持 Kimi、GLM、Qwen。",
+  history: "历史对话",
+  historyEmpty: "还没有历史对话。每轮结束后会自动保存。",
+  historyBusy: "请先完成或停止当前对话，再打开历史记录。",
+  untitledChat: "（未命名）",
+  messagesCount: (n: number) => `${n} 条消息`,
+  deleteChat: "删除",
+  confirmDelete: "确认删除？",
+  clearAllHistory: "清空历史记录",
+  confirmClearAll: "删除全部历史对话？",
 };

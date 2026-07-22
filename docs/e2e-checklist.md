@@ -110,3 +110,25 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
     banner, settings inputs. Toggle back to light live.
 32. **Personality-menu clearance** — with the restyle, Excel's ⓘ button still doesn't
     overlap the top-bar icons or the Settings ✕ on either host.
+
+## Chat history
+
+33. ★ **Autosave and resume** — run a turn, press + (new chat), open the clock icon → the
+    old chat is listed with its title, workbook badge, relative date and message count.
+    Open it: the transcript returns AND a follow-up message continues the same
+    conversation (the model remembers the earlier context). The record updates in place —
+    the list must not grow a duplicate.
+34. **Saved on stop and on error** — Stop a turn mid-stream, then trigger an API error
+    (wrong key). Both conversations appear in history; neither is lost.
+35. ★ **Restored cards cannot revert live edits** — in one session make a real edit
+    (Revert available), press + , reopen the old chat from history → its tool cards show
+    NO Revert button, and the StatusBar revert count for the current session is unchanged.
+    This is the stepId-stripping guard; a Revert button here would undo an unrelated edit.
+36. **Streaming guard** — open history while a turn is running → rows are disabled with a
+    hint; clicking one does nothing.
+37. **Delete and clear** — trash icon asks to confirm, then removes only that chat;
+    Clear all empties the list and shows the empty state.
+38. **Workbook labels** — start chats in two different workbooks → each row is badged with
+    the workbook it came from.
+39. **Storage bounds** — after heavy use (many long turns) the pane still starts fast and
+    Settings/API keys are unaffected; history caps at 50 chats, oldest dropped first.

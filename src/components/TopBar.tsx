@@ -1,9 +1,9 @@
-import { Plus, Settings } from "lucide-react";
+import { History, Plus, Settings } from "lucide-react";
 import { useT } from "../i18n";
-import { resetChat } from "../store/chatStore";
+import { newChatWithSave } from "../store/chatHistory";
 import { updateSettings, useSettings } from "../store/settings";
 
-export default function TopBar({ onSettings }: { onSettings: () => void }) {
+export default function TopBar({ onSettings, onHistory }: { onSettings: () => void; onHistory: () => void }) {
   const t = useT();
   const s = useSettings();
   return (
@@ -16,7 +16,11 @@ export default function TopBar({ onSettings }: { onSettings: () => void }) {
       >
         {s.language === "zh" ? "EN" : "中"}
       </button>
-      <button className="iconbtn" title={t.newChat} onClick={resetChat}>
+      <button className="iconbtn" title={t.history} onClick={onHistory}>
+        <History size={16} />
+      </button>
+      {/* Banks the outgoing conversation into history before clearing. */}
+      <button className="iconbtn" title={t.newChat} onClick={() => void newChatWithSave()}>
         <Plus size={16} />
       </button>
       <button className="iconbtn" title={t.settings} onClick={onSettings}>
