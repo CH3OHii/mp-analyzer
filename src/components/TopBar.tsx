@@ -8,12 +8,12 @@ export default function TopBar({ onSettings, onHistory }: { onSettings: () => vo
   return (
     <div className="topbar">
       <span className="title">{t.appTitle}</span>
-      <button className="iconbtn" title={t.history} onClick={onHistory}>
-        <History size={16} />
-      </button>
       {/* Banks the outgoing conversation into history before clearing. */}
       <button className="iconbtn" title={t.newChat} onClick={() => void newChatWithSave()}>
         <Plus size={16} />
+      </button>
+      <button className="iconbtn" title={t.history} onClick={onHistory}>
+        <History size={16} />
       </button>
       <button className="iconbtn" title={t.settings} onClick={onSettings}>
         <Settings size={16} />
