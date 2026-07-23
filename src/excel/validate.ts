@@ -2,7 +2,7 @@
 // the approval gate, so the user is never asked to approve a call that would
 // fail, and the model gets teaching error messages it can self-correct from.
 
-import { parseA1, parseCellRef, rectCols, rectRows } from "./guards";
+import { AGG_SCAN_MAX, AGG_TOP_N_MAX, FILL_MAX, parseA1, parseCellRef, rectCells, rectCols, rectRows } from "./guards";
 
 export type DeepResult = { ok: true } | { ok: false; code: string; message: string };
 
@@ -249,6 +249,203 @@ export function validateCfRule(rule: unknown): DeepResult {
   return OK;
 }
 
+const AGG_FNS = new Set(["sum", "count", "avg", "min", "max", "distinct"]);
+const FILTER_OPS = new Set(["eq", "ne", "gt", "ge", "lt", "le", "contains", "in", "blank", "not_blank"]);
+const AGG_SORTS = new Set(["desc", "asc", "group"]);
+
+export function validateAggregateArgs(args: Record<string, unknown>): DeepResult {
+  if (!parseA1(String(args.range ?? ""))) {
+    return fail("bad_range", `Invalid A1 range: "${args.range}" — pass a bounded range like "A1:H50000" including the header row`);
+  }
+  for (const key of ["group_by", "columns"] as const) {
+    const v = args[key];
+    if (v != null && (!Array.isArray(v) || v.some((x) => typeof x !== "string"))) {
+      return fail("bad_args", `${key} must be an array of column letters or header strings`);
+    }
+  }
+  if (args.values != null) {
+    if (!Array.isArray(args.values)) return fail("bad_args", "values must be an array of {column, agg}");
+    for (const v of args.values) {
+      const o = (v ?? {}) as Record<string, unknown>;
+      if (typeof o.column !== "string" || !o.column) return fail("bad_args", "each values entry needs a column (letter or header)");
+      if (!AGG_FNS.has(String(o.agg))) return fail("bad_args", `agg must be one of ${[...AGG_FNS].join("/")}`);
+    }
+  }
+  if (args.filters != null) {
+    if (!Array.isArray(args.filters)) return fail("bad_args", "filters must be an array of {column, op, value}");
+    for (const f of args.filters) {
+      const o = (f ?? {}) as Record<string, unknown>;
+      if (typeof o.column !== "string" || !o.column) return fail("bad_args", "each filter needs a column");
+      const op = String(o.op);
+      if (!FILTER_OPS.has(op)) return fail("bad_args", `filter op must be one of ${[...FILTER_OPS].join("/")}`);
+      if (op === "in" && (!Array.isArray(o.values) || o.values.length === 0)) {
+        return fail("bad_args", 'op "in" needs a non-empty values array');
+      }
+      // An operator without a usable operand would silently match nothing (or
+      // everything, for contains "") — reject it before it burns a 10M-cell scan.
+      if (["gt", "ge", "lt", "le"].includes(op) && (o.value == null || !Number.isFinite(Number(o.value)))) {
+        return fail("bad_args", `op "${op}" needs a numeric value`);
+      }
+      if (["eq", "ne", "contains"].includes(op) && (o.value == null || o.value === "")) {
+        return fail("bad_args", `op "${op}" needs a value`);
+      }
+    }
+  }
+  if (args.top_n != null && (!Number.isInteger(args.top_n) || Number(args.top_n) < 1 || Number(args.top_n) > AGG_TOP_N_MAX)) {
+    return fail("bad_args", `top_n must be an integer between 1 and ${AGG_TOP_N_MAX}`);
+  }
+  if (args.sort != null && !AGG_SORTS.has(String(args.sort))) {
+    return fail("bad_args", "sort must be desc, asc, or group");
+  }
+  return OK;
+}
+
+const PIVOT_ACTIONS = new Set(["create", "describe", "list", "add_field", "remove_field", "set_aggregation", "refresh", "delete"]);
+const PIVOT_AGGS = new Set(["sum", "count", "average", "min", "max", "product"]);
+const PIVOT_AREAS = new Set(["rows", "columns", "values"]);
+const PIVOT_LAYOUTS = new Set(["compact", "tabular", "outline"]);
+
+export function validatePivotArgs(args: Record<string, unknown>): DeepResult {
+  const action = String(args.action ?? "");
+  if (!PIVOT_ACTIONS.has(action)) {
+    return fail("bad_args", `action must be one of ${[...PIVOT_ACTIONS].join("/")}`);
+  }
+  if (action === "list") return OK;
+  if (action === "create") {
+    if (typeof args.source !== "string" || !args.source.trim()) {
+      return fail("bad_args", "create needs source — an A1 range INCLUDING the header row, or an Excel Table name");
+    }
+    for (const key of ["rows", "columns"] as const) {
+      const v = args[key];
+      if (v != null && (!Array.isArray(v) || v.some((x) => typeof x !== "string" || !x))) {
+        return fail("bad_args", `${key} must be an array of field names (source header text)`);
+      }
+    }
+    const rows = (args.rows as string[]) ?? [];
+    const columns = (args.columns as string[]) ?? [];
+    if (rows.length + columns.length === 0) {
+      return fail("bad_args", "create needs at least one field in rows or columns");
+    }
+    if (!Array.isArray(args.values) || args.values.length === 0) {
+      return fail("bad_args", "create needs values: [{field, agg}] — at least one aggregated field");
+    }
+    for (const v of args.values) {
+      const o = (v ?? {}) as Record<string, unknown>;
+      if (typeof o.field !== "string" || !o.field) return fail("bad_args", "each values entry needs a field (source header text)");
+      if (o.agg != null && !PIVOT_AGGS.has(String(o.agg))) {
+        return fail("bad_args", `agg must be one of ${[...PIVOT_AGGS].join("/")}`);
+      }
+    }
+    if (args.dest_cell != null && !parseCellRef(String(args.dest_cell))) {
+      return fail("bad_args", `dest_cell must be a single cell like "A3", got "${args.dest_cell}"`);
+    }
+    if (args.layout != null && !PIVOT_LAYOUTS.has(String(args.layout))) {
+      return fail("bad_args", "layout must be compact, tabular, or outline");
+    }
+    return OK;
+  }
+  if (typeof args.name !== "string" || !args.name) {
+    return fail("bad_args", `${action} needs name — the pivot table's name (see manage_pivot list)`);
+  }
+  if (action === "add_field" || action === "remove_field" || action === "set_aggregation") {
+    if (typeof args.field !== "string" || !args.field) return fail("bad_args", `${action} needs field (source header text)`);
+    if (action === "add_field" && !PIVOT_AREAS.has(String(args.area))) {
+      return fail("bad_args", "add_field needs area: rows, columns, or values");
+    }
+    if (action === "set_aggregation" && !PIVOT_AGGS.has(String(args.agg))) {
+      return fail("bad_args", `set_aggregation needs agg — one of ${[...PIVOT_AGGS].join("/")}`);
+    }
+    if (args.agg != null && !PIVOT_AGGS.has(String(args.agg))) {
+      return fail("bad_args", `agg must be one of ${[...PIVOT_AGGS].join("/")}`);
+    }
+  }
+  return OK;
+}
+
+const TABLE_ACTIONS = new Set(["create", "rename", "set_totals", "unlist", "list"]);
+/** Letters/underscore/CJK first char; no spaces; digits/dots allowed after. */
+const TABLE_NAME_RE = /^[\p{L}_][\p{L}\p{N}_.]*$/u;
+
+export function validateTableName(name: string): DeepResult {
+  if (!name) return fail("bad_args", "table name must be non-empty");
+  if (!TABLE_NAME_RE.test(name)) {
+    return fail("bad_args", `table name "${name}" is invalid — no spaces; start with a letter or underscore`);
+  }
+  if (parseCellRef(name)) {
+    return fail("bad_args", `table name "${name}" looks like a cell reference — Excel rejects those`);
+  }
+  return OK;
+}
+
+export function validateTableArgs(args: Record<string, unknown>): DeepResult {
+  const action = String(args.action ?? "");
+  if (!TABLE_ACTIONS.has(action)) return fail("bad_args", `action must be one of ${[...TABLE_ACTIONS].join("/")}`);
+  if (action === "list") return OK;
+  if (action === "create") {
+    if (!parseA1(String(args.range ?? ""))) {
+      return fail("bad_range", `create needs a valid A1 range including the header row, got "${args.range}"`);
+    }
+    if (args.name != null) return validateTableName(String(args.name));
+    return OK;
+  }
+  if (typeof args.name !== "string" || !args.name) return fail("bad_args", `${action} needs name (see manage_table list)`);
+  if (action === "rename") {
+    if (typeof args.new_name !== "string") return fail("bad_args", "rename needs new_name");
+    return validateTableName(String(args.new_name));
+  }
+  if (action === "set_totals" && typeof args.on !== "boolean") {
+    return fail("bad_args", "set_totals needs on: true|false");
+  }
+  return OK;
+}
+
+const SF_ACTIONS = new Set(["sort", "auto_filter", "table_filter", "clear_filters"]);
+const SORT_DIRS = new Set(["asc", "desc"]);
+
+export function validateSortFilterArgs(args: Record<string, unknown>): DeepResult {
+  const action = String(args.action ?? "");
+  if (!SF_ACTIONS.has(action)) return fail("bad_args", `action must be one of ${[...SF_ACTIONS].join("/")}`);
+  if (action === "sort") {
+    const hasRange = typeof args.range === "string" && !!args.range;
+    const hasTable = typeof args.table === "string" && !!args.table;
+    if (hasRange === hasTable) return fail("bad_args", "sort needs exactly one of range or table");
+    if (hasRange) {
+      const rect = parseA1(String(args.range));
+      if (!rect) return fail("bad_range", `Invalid A1 range: "${args.range}"`);
+      if (rectCells(rect) > AGG_SCAN_MAX) {
+        return fail("too_large", `${rectCells(rect)} cells exceeds the ${AGG_SCAN_MAX}-cell sort cap.`);
+      }
+    }
+    if (!Array.isArray(args.keys) || args.keys.length === 0) {
+      return fail("bad_args", "sort needs keys: [{column, direction}] — at least one");
+    }
+    for (const k of args.keys) {
+      const o = (k ?? {}) as Record<string, unknown>;
+      if (typeof o.column !== "string" || !o.column) return fail("bad_args", "each sort key needs a column (letter or header)");
+      if (o.direction != null && !SORT_DIRS.has(String(o.direction))) {
+        return fail("bad_args", "sort direction must be asc or desc");
+      }
+    }
+    return OK;
+  }
+  if (action === "auto_filter" || action === "table_filter") {
+    if (action === "auto_filter" && !parseA1(String(args.range ?? ""))) {
+      return fail("bad_range", `auto_filter needs a valid range including headers, got "${args.range}"`);
+    }
+    if (action === "table_filter" && (typeof args.table !== "string" || !args.table)) {
+      return fail("bad_args", "table_filter needs table");
+    }
+    if (typeof args.column !== "string" || !args.column) return fail("bad_args", `${action} needs column`);
+    const hasValues = Array.isArray(args.values) && args.values.length > 0;
+    const hasCriterion = typeof args.criterion === "string" && !!args.criterion;
+    if (!hasValues && !hasCriterion) {
+      return fail("bad_args", `${action} needs values: [...] or criterion: ">100"-style string`);
+    }
+    return OK;
+  }
+  return OK; // clear_filters: table optional, sheet optional
+}
+
 /** Tool-specific deep checks, dispatched by name. Unknown tools pass. */
 export function deepValidate(toolName: string, args: Record<string, unknown>): DeepResult {
   switch (toolName) {
@@ -262,12 +459,27 @@ export function deepValidate(toolName: string, args: Record<string, unknown>): D
         const rect = validateRectMatrix(args.formulas, "formulas");
         if (!rect.ok) return rect;
       }
+      // Known-fail size caps belong BEFORE the approval gate, not in run().
+      if (typeof args.formula_r1c1 === "string" && args.formula_r1c1 !== "") {
+        const rect = parseA1(String(args.range ?? ""));
+        if (rect && rectCells(rect) > FILL_MAX) {
+          return fail("too_large", `${rectCells(rect)} cells exceeds the ${FILL_MAX}-cell fill cap — split the operation.`);
+        }
+      }
       return validateExpect(args.expect);
     }
     case "format_range":
       return validateFormatArgs(args);
     case "conditional_formatting":
       return validateCfRule(args.rule);
+    case "aggregate_range":
+      return validateAggregateArgs(args);
+    case "manage_pivot":
+      return validatePivotArgs(args);
+    case "manage_table":
+      return validateTableArgs(args);
+    case "sort_filter":
+      return validateSortFilterArgs(args);
     default:
       return OK;
   }

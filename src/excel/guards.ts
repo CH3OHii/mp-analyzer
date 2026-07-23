@@ -13,6 +13,31 @@ export const HEADER_MAX_COLS = 30;
 export const FIND_MAX_DEFAULT = 50;
 export const DEFAULT_READ_ROWS = 50;
 
+// aggregate_range: in-engine aggregation reads far more cells than read_range
+// because only compact summaries reach the model.
+export const AGG_SCAN_MAX = 10_000_000; // ~1M rows × 10 cols — Excel's full grid height
+export const AGG_CHUNK_CELLS = 100_000; // cells loaded per ctx.sync()
+export const AGG_TOP_N_MAX = 200; // groups returned to the model
+export const AGG_GROUPS_TRACK_MAX = 50_000; // memory ceiling for the group map
+export const AGG_DISTINCT_TRACK_MAX = 10_000; // per-column/group distinct-set cap
+/** formula_r1c1 fills above SNAPSHOT_MAX escalate to hard approval with NO undo
+ *  step (too big to snapshot); refused only above this. ≈ one full column. */
+export const FILL_MAX = 1_050_000;
+
+/** Undo policy for sorts (same rule as big formula fills): snapshot-and-soft
+ *  up to SNAPSHOT_MAX, hard-approval-with-no-undo above it. */
+export function sortUndoPlan(cells: number): { mut: "soft" | "hard"; snapshot: boolean } {
+  return cells <= SNAPSHOT_MAX ? { mut: "soft", snapshot: true } : { mut: "hard", snapshot: false };
+}
+
+/** Quote a sheet name for use in an address string (`'Q1 Data'!A1:B5`).
+ *  Conservative: quotes anything beyond plain identifier characters AND names
+ *  that would misparse as a cell reference (a sheet literally named "A1"). */
+export function quoteSheetName(name: string): string {
+  const plain = /^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !parseCellRef(name);
+  return plain ? name : `'${name.replace(/'/g, "''")}'`;
+}
+
 /** 1-based inclusive rectangle. */
 export interface Rect {
   r0: number;

@@ -21,7 +21,7 @@ export const readTools: ExcelToolSpec[] = [
   {
     name: "get_workbook_overview",
     description:
-      "Map the whole workbook: every sheet with its used range, size, header row, chart count, plus table names and the user's current selection. Call this first when the workbook is unknown.",
+      "Map the whole workbook: every sheet with its used range, size, header row, chart count, pivot table names, plus table names and the user's current selection. Call this first when the workbook is unknown.",
     parameters: { type: "object", properties: {}, required: [] },
     mutating: "no",
     async run() {
@@ -49,8 +49,17 @@ export const readTools: ExcelToolSpec[] = [
           visibility: ws.visibility,
           used: ws.getUsedRangeOrNullObject(),
           chartCount: ws.charts.getCount(),
+          pivots: ws.pivotTables,
         }));
-        entries.forEach((e) => e.used.load("address,rowCount,columnCount,rowIndex,columnIndex"));
+        entries.forEach((e) => {
+          e.used.load("address,rowCount,columnCount,rowIndex,columnIndex");
+          e.pivots.load("items/name");
+        });
+        const tableHandles = tables.items.map((t) => {
+          const r = t.getRange();
+          r.load("address");
+          return { t, r };
+        });
         await ctx.sync();
 
         const headerReads = entries
@@ -75,13 +84,14 @@ export const readTools: ExcelToolSpec[] = [
             .map((x) => `${x.col}:"${x.s}"`)
             .join(", ");
           const charts = e.chartCount.value ? ` | ${e.chartCount.value} chart(s)` : "";
+          const pivots = e.pivots.items.length ? ` | pivots: ${e.pivots.items.map((p) => p.name).join(", ")}` : "";
           return (
             `${e.name} | ${stripSheet(e.used.address)} | ${e.used.rowCount}x${e.used.columnCount}` +
-            `${charts}${vis}` +
+            `${charts}${pivots}${vis}` +
             (hdr ? ` | headers: ${hdr}` : "")
           );
         });
-        return { sheets: sheetLines, tables: tables.items.map((t) => t.name), selection };
+        return { sheets: sheetLines, tables: tableHandles.map((h) => `${h.t.name} (${h.r.address})`), selection };
       });
     },
   },
@@ -122,7 +132,7 @@ export const readTools: ExcelToolSpec[] = [
           return {
             error: {
               code: "too_large",
-              message: `Range is ${range.rowCount}x${range.columnCount} (${total} cells). Narrow the range or paginate with start_row/max_rows.`,
+              message: `Range is ${range.rowCount}x${range.columnCount} (${total} cells). For analysis this size, use aggregate_range (group-by/profile — scans in-engine). To inspect raw cells, narrow the range or paginate with start_row/max_rows.`,
             },
           };
         }

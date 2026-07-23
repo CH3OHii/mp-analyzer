@@ -1,8 +1,11 @@
 import type { MutKind, ToolDef } from "../llm/types";
 import type { PendingPreview } from "../store/chatStore";
+import { computeTools } from "./computeTools";
 import { toErrorResult } from "./env";
 import { formatTools } from "./formatTools";
+import { pivotTools } from "./pivotTools";
 import { readTools } from "./readTools";
+import { tableTools } from "./tableTools";
 import { writeTools } from "./writeTools";
 
 export interface ExcelToolSpec {
@@ -15,7 +18,14 @@ export interface ExcelToolSpec {
   preview?(args: Record<string, unknown>): Promise<PendingPreview>;
 }
 
-export const allTools: ExcelToolSpec[] = [...readTools, ...writeTools, ...formatTools];
+export const allTools: ExcelToolSpec[] = [
+  ...readTools,
+  ...computeTools,
+  ...writeTools,
+  ...formatTools,
+  ...pivotTools,
+  ...tableTools,
+];
 
 export function getTool(name: string): ExcelToolSpec | undefined {
   return allTools.find((t) => t.name === name);

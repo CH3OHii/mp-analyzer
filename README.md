@@ -5,10 +5,12 @@ A "Claude for Excel"-style AI copilot that lives in a task pane inside **desktop
 GLM (Zhipu), Qwen (DashScope), MiniMax — through their OpenAI-compatible APIs.
 
 The agent **reads and edits the open workbook**: values, formulas, model scaffolds,
-scenario tables, formatting, conditional formats, charts. Every mutation is
-**previewed before it is applied**, **verified after it lands**, and **snapshotted for
-one-click revert** — programmatic edits bypass Excel's own Ctrl+Z, so the add-in
-brings its own undo stack.
+scenario tables, formatting, conditional formats, charts, **pivot tables, Excel
+Tables, and sort/filter**. It **analyzes up to ~1M rows** without flooding the model:
+`aggregate_range` runs group-by/profiling inside Excel and returns only compact
+summaries. Every mutation is **previewed before it is applied**, **verified after it
+lands**, and **snapshotted for one-click revert** — programmatic edits bypass Excel's
+own Ctrl+Z, so the add-in brings its own undo stack.
 
 **An analyst skill ships built-in** ([skills/builtin/](skills/builtin)): a senior China
 NEV industry analyst that layers policy changes, launch calendars, pricing moves, and
@@ -53,9 +55,13 @@ The agent does not just claim it wrote something — it checks:
 | **Read-back** | After every write, re-reads the range and reports what actually landed, including `#NAME?` / `#REF!` / `#VALUE!` and 14 other Excel error literals | Free (same Excel batch) |
 | **Turn-end audit** | When the agent finishes, re-scans every range it wrote this turn for error cells and empty results; hands problems back for a bounded repair round | Free (local reads) |
 | **AI review** | One extra temperature-0 model call reviews *your request* against *what was actually done*, and flags results that are wrong rather than merely broken | ~1 small call per editing turn |
+| **Independent reviewer** | Optionally run that AI review on a **different provider/model** (Settings → AI reviewer model) — a true cross-vendor second opinion; the VerifyCard shows which model reviewed | Same 1 small call, billed to the reviewer's key |
 
 Controlled by **Settings → Result verification**: `Off` / `Basic` (read-back + audit) /
-`Full` (adds the AI review, **default**).
+`Full` (adds the AI review, **default**). With no reviewer model configured, Full
+reviews with the primary model; configure one to cross-check (it reuses the API key
+saved for that provider, and falls back to the primary model with a notice if that
+key is missing).
 
 ---
 
@@ -263,12 +269,18 @@ with auto-apply enabled.
 card, or **Revert all** in the status bar. Honest limits: revert restores contents and
 number formats, but `#REF!` errors that a structural delete created in *other* cells do
 not heal, and restoring a deleted sheet loses rich styling beyond number formats.
+Formula fills and sorts **above the 20k-cell snapshot cap** are allowed after an
+explicit "cannot be reverted" approval, and push no undo step. Pivot edits revert
+field-by-field (styling kept); reverting a filter clears criteria rather than
+restoring the previous ones; pivot refresh and pivot delete (on hosts below
+ExcelApi 1.15) are not revertable.
 
 **Settings worth knowing:**
 
 | Setting | Meaning |
 | --- | --- |
 | **Result verification** | `Off` / `Basic` / `Full` (default) — see the table at the top |
+| **AI reviewer model** | (shown when verification is Full) an independent provider/model for the AI review; "Same as main model" by default |
 | **Auto-apply changes** | Skip approval for normal writes; destructive ops still ask |
 | **Max agent steps per turn** | Default 15; raise for long multi-step builds |
 | **Context budget (tokens)** | Default 32000; old tool results are elided before whole exchanges are dropped |
@@ -292,14 +304,18 @@ your key to anyone you send the workbook to.
 - **Verified after** — see the verification pipeline above.
 - **Bounded** — reads clipped at 5k cells per call (paginated), writes/snapshots at
   10k/20k cells, tool results at 12k chars, repair rounds structurally capped.
+  `aggregate_range` scans up to 10M cells **in-engine** (only summaries reach the
+  model; full-sheet scans can take ~1 min). `formula_r1c1` fills go up to ~1.05M
+  cells — above the snapshot cap they always ask and are not revertable.
 
 ---
 
 ## Development
 
 ```bash
-npm test         # 117 unit tests — SSE parsing, JSON repair, A1 guards, validation,
-                 # error scanning, audit dedupe, retry/backoff, verifier parsing
+npm test         # 231 unit tests — SSE parsing, JSON repair, A1 guards, validation,
+                 # aggregation core, pivot/table arg rules, error scanning, audit
+                 # dedupe, retry/backoff, verifier parsing + reviewer resolution
 npm run build    # tsc --noEmit + vite production build
 npm run icons    # regenerate ribbon icons
 npm run proxy    # optional local CORS fallback proxy (see below)
@@ -309,7 +325,8 @@ Architecture — pure client-side, no backend:
 
 ```
 src/llm        — provider presets/quirks, SSE client, tool-call JSON repair, HTTP retry
-src/excel      — Office.js wrapper, A1 guards, 11 agent tools, validation, verification,
+src/excel      — Office.js wrapper, A1 guards, 15 agent tools (incl. aggregate_range,
+                 manage_pivot, manage_table, sort_filter), validation, verification,
                  snapshot/revert stack
 src/agent      — agent loop (stream → tools → approval → verify), audit, AI verifier,
                  system prompt, presets, history trimming
@@ -333,10 +350,14 @@ cross-origin browser calls, so direct calls should just work. Confirm inside Exc
 `npm run proxy` (a ~100-line local HTTPS forwarder, host-whitelisted, bound to
 127.0.0.1) and enable **Use local CORS proxy** in Settings.
 
-### Deferred to v1.1
+### Deferred to v1.2
 
-`copy_range`, `sort_range`, `create_table` (native tables/autofilter), pivot tables,
-out-of-order revert, streaming tool-argument preview.
+`copy_range`, named ranges, data-validation dropdowns, pivot filters below
+ExcelApi 1.12, restoring previous filter criteria on revert, out-of-order revert,
+streaming tool-argument preview.
+
+*(Shipped since v1.0: pivot tables, Excel Tables, sort/filter, in-engine
+aggregation to ~1M rows, independent AI reviewer model.)*
 
 ---
 
