@@ -34,7 +34,11 @@ model-side context is restored too. History lives in this pane's localStorage; r
 tool cards are deliberately not revertable, since the undo stack belongs to the live
 Excel session.
 
-**Web search** (globe button next to Send) uses each provider's native mechanism —
+**Prompt library** (book button next to Send): save reusable prompts with `{变量}`
+placeholders — e.g. `分析{月份}的NEV销量，对比{品牌}` — and picking one opens a quick
+fill-in form, then drops the finished text into the composer for review before sending.
+
+**Web search** (Settings → Provider → 联网搜索) uses each provider's native mechanism —
 Kimi `$web_search`, GLM `web_search`, Qwen `enable_search` — entirely from the pane, no
 extra keys. DeepSeek and MiniMax have no native search, so the toggle is disabled there.
 On Qwen, search works best with `qwen-plus` (on `qwen3-max` it may require thinking

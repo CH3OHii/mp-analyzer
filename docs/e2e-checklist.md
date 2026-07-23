@@ -86,7 +86,7 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
     open the menu.
 27. **New-chat clears the queue** — queue two messages, press + (new chat) → chips
     gone, nothing dispatches.
-28. ★ **Web search per provider** (globe button next to Send):
+28. ★ **Web search per provider** (toggle now in Settings → Provider → 联网搜索):
     - Kimi: ask "今天新能源购置税政策有什么新变化" with globe ON → a 联网搜索 tool
       card appears with the query; final answer cites source names + dates. Round-trip
       completes (no dangling tool call), audit/verify still run on Excel edits.
@@ -94,8 +94,8 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
       info. No HTTP 400 (tool_choice guard).
     - Qwen: test on qwen-plus; on qwen3-max note whether search fires (thinking-mode
       caveat) — record result here.
-    - DeepSeek/MiniMax: globe is disabled with an explanatory tooltip.
-    - Globe OFF: system prompt has no "# Web search" section; model asks for data
+    - DeepSeek/MiniMax: the Settings checkbox is disabled with an explanatory hint.
+    - Toggle OFF: system prompt has no "# Web search" section; model asks for data
       instead of claiming to search.
 29. **Built-in skills** — activate each of the five via "/" and run a small real task
     → skill conventions hold: Inputs/Calc/Output separation, live formulas (no pasted
@@ -132,3 +132,8 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
     the workbook it came from.
 39. **Storage bounds** — after heavy use (many long turns) the pane still starts fast and
     Settings/API keys are unaffected; history caps at 50 chats, oldest dropped first.
+40. **Prompt library** — book button next to Send opens the library. Create a template
+    with two placeholders (e.g. 分析{月份}的NEV销量，对比{品牌}); using it shows one
+    input per variable; 插入 puts the substituted text in the composer WITHOUT sending;
+    a blank variable stays as a literal {月份} token. Edit and two-step delete work;
+    templates survive a pane reload (settings localStorage).

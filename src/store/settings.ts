@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import type { PromptTemplate } from "../agent/promptTemplates";
 import { getPreset } from "../llm/providers";
 import type { LlmSettings, ProviderId } from "../llm/types";
 
@@ -27,6 +28,8 @@ export interface AppSettings {
   customPresets: CustomPreset[];
   /** Provider-native web search (Kimi/GLM/Qwen). Ignored where unsupported. */
   webSearchOn: boolean;
+  /** User-authored prompt templates with {placeholder} tokens. */
+  promptTemplates: PromptTemplate[];
 }
 
 const KEY = "mp-analyzer-settings-v1";
@@ -53,6 +56,7 @@ function defaults(): AppSettings {
     styleLayerOn: false,
     customPresets: [],
     webSearchOn: false,
+    promptTemplates: [],
   };
 }
 

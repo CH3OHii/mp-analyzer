@@ -132,8 +132,20 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
               </option>
             ))}
           </select>
-          <div className="hint">{t.webSearchProviderHint}</div>
         </div>
+        <label className="row">
+          <input
+            type="checkbox"
+            checked={s.webSearchOn && !!preset.quirks.webSearch}
+            disabled={!preset.quirks.webSearch}
+            onChange={(e) => updateSettings({ webSearchOn: e.target.checked })}
+          />
+          {t.webSearchToggle}
+        </label>
+        {!preset.quirks.webSearch && <div className="hint">{t.webSearchUnsupported}</div>}
+        {!!preset.quirks.webSearch && s.llm.providerId === "qwen" && (
+          <div className="hint">{t.webSearchQwenHint}</div>
+        )}
         <div className="field">
           <label>{t.baseUrl}</label>
           <input type="text" value={s.llm.baseUrl} onChange={(e) => updateSettings({ llm: { baseUrl: e.target.value } })} />

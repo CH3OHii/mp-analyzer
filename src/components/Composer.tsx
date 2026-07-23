@@ -1,11 +1,11 @@
-import { ArrowUp, Globe, Palette, Square, X } from "lucide-react";
+import { ArrowUp, BookText, Palette, Square, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { sendOrQueue } from "../agent/dispatch";
 import { filterPresets, resolveAnalysisPresets, styleLayerPreset, type Preset } from "../agent/presets";
 import { useT } from "../i18n";
-import { getPreset } from "../llm/providers";
 import { removeQueuedAt, stopTurn, useChat } from "../store/chatStore";
 import { updateSettings, useSettings } from "../store/settings";
+import PromptLibraryPanel from "./PromptLibraryPanel";
 import SlashMenu, { type SlashEntry } from "./SlashMenu";
 
 /** "/" as first char, no whitespace yet — a space turns it back into plain text. */
@@ -31,15 +31,10 @@ export default function Composer() {
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, [text]);
 
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const presets = resolveAnalysisPresets(s.customPresets);
   const active = s.analysisPresetId ? presets.find((p) => p.id === s.analysisPresetId) : null;
   const nameOf = (p: Preset) => (s.language === "zh" ? p.nameZh : p.nameEn);
-
-  const wsSupported = !!getPreset(s.llm.providerId).quirks.webSearch;
-  const wsTitle = !wsSupported
-    ? t.webSearchUnsupported
-    : (s.webSearchOn ? t.webSearchOnTip : t.webSearchOffTip) +
-      (s.llm.providerId === "qwen" ? ` ${t.webSearchQwenHint}` : "");
 
   const slashOpen = SLASH_RE.test(text) && !slashDismissed;
   const entries: SlashEntry[] = [];
@@ -87,6 +82,16 @@ export default function Composer() {
 
   return (
     <div className="composer-wrap">
+      {libraryOpen && (
+        <PromptLibraryPanel
+          onClose={() => setLibraryOpen(false)}
+          onInsert={(txt) => {
+            setText(txt);
+            setLibraryOpen(false);
+            taRef.current?.focus();
+          }}
+        />
+      )}
       {slashOpen && entries.length > 0 && (
         <SlashMenu entries={entries} highlight={hi} onHover={setHighlight} onPick={pick} />
       )}
@@ -171,13 +176,8 @@ export default function Composer() {
             }
           }}
         />
-        <button
-          className={`iconbtn globe ${wsSupported && s.webSearchOn ? "active" : ""}`}
-          disabled={!wsSupported}
-          title={wsTitle}
-          onClick={() => updateSettings({ webSearchOn: !s.webSearchOn })}
-        >
-          <Globe size={15} />
+        <button className="iconbtn side" title={t.promptLibrary} onClick={() => setLibraryOpen(true)}>
+          <BookText size={15} />
         </button>
         {chatState.streaming ? (
           <button className="sendbtn stop" onClick={stopTurn} title={t.stop}>

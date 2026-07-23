@@ -257,15 +257,16 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .sendbtn:disabled { opacity: 0.35; cursor: default; }
 .sendbtn.stop { background: var(--danger); }
 .sendbtn.stop:hover { filter: brightness(1.1); }
-.iconbtn.globe {
+/* round side button next to Send (prompt library) */
+.iconbtn.side {
   flex: none; width: 36px; height: 36px; border-radius: 999px; padding: 0;
   align-self: flex-end; border: 1px solid var(--border-strong);
 }
-.iconbtn.globe.active { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
-.iconbtn.globe:disabled { opacity: 0.35; cursor: default; background: none; }
 
 /* ============================== settings ============================== */
 .panel { position: absolute; inset: 0; background: var(--bg); z-index: 10; display: flex; flex-direction: column; }
+/* for panels rendered inside a positioned ancestor that isn't .app */
+.panel.fixed { position: fixed; }
 .panel .head { display: flex; align-items: center; padding: 11px 12px; border-bottom: 1px solid var(--border); font-weight: 700; letter-spacing: -0.2px; color: var(--brand-text); }
 .panel .head .iconbtn { margin-left: auto; }
 .panel .body { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 12px; }
