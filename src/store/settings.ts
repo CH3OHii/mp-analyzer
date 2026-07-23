@@ -30,6 +30,9 @@ export interface AppSettings {
   webSearchOn: boolean;
   /** User-authored prompt templates with {placeholder} tokens. */
   promptTemplates: PromptTemplate[];
+  /** Independent reviewer model for verifyMode "full". null = review with the
+   *  primary model. Its API key comes from the per-provider apiKeys map. */
+  verifierLlm: null | { providerId: ProviderId; baseUrl: string; model: string; useProxy?: boolean };
 }
 
 const KEY = "mp-analyzer-settings-v1";
@@ -57,6 +60,7 @@ function defaults(): AppSettings {
     customPresets: [],
     webSearchOn: false,
     promptTemplates: [],
+    verifierLlm: null,
   };
 }
 
@@ -116,6 +120,38 @@ export function switchProvider(id: ProviderId): void {
 /** Full LLM settings with the current provider's key injected. */
 export function effectiveLlm(s: AppSettings = state): LlmSettings {
   return { ...s.llm, apiKey: s.apiKeys[s.llm.providerId] ?? "" };
+}
+
+/** Resolve the reviewer model for the turn-end verification pass.
+ *  Pure — unit-tested without the store. Falls back to the primary model when
+ *  no reviewer is configured, or when the configured provider has no saved key
+ *  (fellBackNoKey lets the loop surface a notice instead of failing silently). */
+export function resolveVerifier(s: AppSettings = state): {
+  llm: LlmSettings;
+  providerId: ProviderId;
+  isCross: boolean;
+  fellBackNoKey: boolean;
+} {
+  const v = s.verifierLlm;
+  if (!v) return { llm: effectiveLlm(s), providerId: s.llm.providerId, isCross: false, fellBackNoKey: false };
+  const key = s.apiKeys[v.providerId] ?? "";
+  if (!key) return { llm: effectiveLlm(s), providerId: s.llm.providerId, isCross: false, fellBackNoKey: true };
+  return {
+    llm: {
+      providerId: v.providerId,
+      baseUrl: v.baseUrl,
+      model: v.model,
+      apiKey: key,
+      useProxy: v.useProxy ?? getPreset(v.providerId).defaultUseProxy ?? false,
+      proxyUrl: s.llm.proxyUrl,
+      // Sampling comes from the primary; runVerifierPass overrides to temp 0 / 1024 anyway.
+      temperature: s.llm.temperature,
+      maxTokens: s.llm.maxTokens,
+    },
+    providerId: v.providerId,
+    isCross: true,
+    fellBackNoKey: false,
+  };
 }
 
 export function useSettings(): AppSettings {

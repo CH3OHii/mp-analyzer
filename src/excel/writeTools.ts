@@ -1,5 +1,6 @@
 import { getSheet, runExcel } from "./env";
 import {
+  FILL_MAX,
   PREVIEW_MAX_COLS,
   PREVIEW_MAX_ROWS,
   SNAPSHOT_MAX,
@@ -207,7 +208,7 @@ export const writeTools: ExcelToolSpec[] = [
   {
     name: "set_formulas",
     description:
-      "Set formulas on a range. Either pass `formulas` (2D array matching the range shape, en-US syntax, A1 refs) or `formula_r1c1` (ONE R1C1-style formula filled across the whole range — the reliable fill-down: relative refs adjust per cell, e.g. \"=RC[-2]/RC[-1]\").",
+      "Set formulas on a range. Either pass `formulas` (2D array matching the range shape, en-US syntax, A1 refs) or `formula_r1c1` (ONE R1C1-style formula filled across the whole range — the reliable fill-down: relative refs adjust per cell, e.g. \"=RC[-2]/RC[-1]\"). r1c1 fills above the snapshot cap always ask for approval and cannot be reverted.",
     parameters: {
       type: "object",
       properties: {
@@ -219,18 +220,28 @@ export const writeTools: ExcelToolSpec[] = [
       },
       required: ["range"],
     },
-    mutating: "soft",
+    // A formula_r1c1 fill too big to snapshot is allowed (up to FILL_MAX) but
+    // escalates to hard approval — it cannot be reverted.
+    mutating(args) {
+      const rect = parseA1(String(args.range ?? ""));
+      const isFill = typeof args.formula_r1c1 === "string" && args.formula_r1c1 !== "";
+      return rect && isFill && rectCells(rect) > SNAPSHOT_MAX ? "hard" : "soft";
+    },
     async run(args) {
       const rect = parseA1(String(args.range ?? ""));
       if (!rect) return { error: { code: "bad_range", message: `Invalid A1 range: "${args.range}"` } };
       const cells = rectCells(rect);
-      if (cells > WRITE_MAX || cells > SNAPSHOT_MAX) {
-        return { error: { code: "too_large", message: `${cells} cells exceeds the per-write cap — split the operation.` } };
-      }
       const hasMatrix = Array.isArray(args.formulas);
       const hasR1 = typeof args.formula_r1c1 === "string" && args.formula_r1c1 !== "";
       if (hasMatrix === hasR1) {
         return { error: { code: "bad_args", message: "Provide exactly one of `formulas` or `formula_r1c1`." } };
+      }
+      const bigFill = hasR1 && cells > SNAPSHOT_MAX;
+      if (hasMatrix && (cells > WRITE_MAX || cells > SNAPSHOT_MAX)) {
+        return { error: { code: "too_large", message: `${cells} cells exceeds the per-write cap — split the operation.` } };
+      }
+      if (hasR1 && cells > FILL_MAX) {
+        return { error: { code: "too_large", message: `${cells} cells exceeds the ${FILL_MAX}-cell fill cap — split the operation.` } };
       }
       const rows = rectRows(rect);
       const cols = rectCols(rect);
@@ -245,7 +256,9 @@ export const writeTools: ExcelToolSpec[] = [
         const ws = getSheet(ctx, args.sheet as string | undefined);
         ws.load("name");
         const range = ws.getRange(addr);
-        range.load("formulas,numberFormat");
+        // A big fill is never snapshotted — loading a million-cell matrix into
+        // the task pane is exactly the memory problem the fill path avoids.
+        if (!bigFill) range.load("formulas,numberFormat");
         const checkExpects = loadExpects(ws, args.expect);
         await ctx.sync();
 
@@ -260,15 +273,41 @@ export const writeTools: ExcelToolSpec[] = [
           };
         }
 
-        const preFormulas = clone2d(range.formulas);
-        const preFormats = clone2d(range.numberFormat);
+        const preFormulas = bigFill ? [] : clone2d(range.formulas);
+        const preFormats = bigFill ? [] : clone2d(range.numberFormat);
         if (hasMatrix) {
           range.formulas = args.formulas as any[][];
-        } else {
+        } else if (!bigFill) {
           const fill = String(args.formula_r1c1);
           range.formulasR1C1 = Array.from({ length: rows }, () => Array(cols).fill(fill));
+        } else {
+          // Fill the first row, then let Excel extend it down natively —
+          // memory stays O(cols) instead of O(cells).
+          const fill = String(args.formula_r1c1);
+          const firstRow = ws.getRangeByIndexes(rect.r0 - 1, rect.c0 - 1, 1, cols);
+          firstRow.formulasR1C1 = [Array(cols).fill(fill)];
+          // Pass the Range OBJECT — a `${ws.name}!` string breaks on sheet
+          // names that need quoting, after the first row already wrote.
+          firstRow.autoFill(range, Excel.AutoFillType.fillCopy);
         }
         await ctx.sync();
+
+        if (bigFill) {
+          // No undo step (too big to snapshot). Verify + audit a bounded top
+          // slice — the full range would be dropped by the audit's cell budget.
+          const rbRows = Math.max(1, Math.floor(SNAPSHOT_MAX / cols));
+          const subAddr = rectToA1({ r0: rect.r0, c0: rect.c0, r1: Math.min(rect.r1, rect.r0 + rbRows - 1), c1: rect.c1 });
+          const sub = ws.getRange(subAddr);
+          const rb = await readBackVerified(ctx, sub, subAddr);
+          return {
+            ok: true,
+            address: `${ws.name}!${addr}`,
+            cells,
+            not_revertable: true,
+            ...(rb ? { verified: { ...rb.verified, sampled: subAddr } } : {}),
+            __mutated: { sheet: ws.name, address: subAddr, nonEmptyWrite: true },
+          };
+        }
 
         // Push the undo step only after the apply sync succeeded (no phantom steps).
         const step = pushStep({
@@ -298,16 +337,21 @@ export const writeTools: ExcelToolSpec[] = [
       let after: unknown[][] | undefined;
       if (Array.isArray(args.formulas)) after = clipAfter(args.formulas as unknown[][]);
       else if (rect && typeof args.formula_r1c1 === "string") {
-        after = clipAfter(
-          Array.from({ length: rectRows(rect) }, () => Array(rectCols(rect)).fill(args.formula_r1c1))
+        // Materialize only the visible preview corner — a big fill can span a
+        // million rows and the full matrix would be allocated just to clip it.
+        after = Array.from({ length: Math.min(rectRows(rect), PREVIEW_MAX_ROWS) }, () =>
+          Array(Math.min(rectCols(rect), PREVIEW_MAX_COLS)).fill(args.formula_r1c1)
         );
       }
+      const bigFill =
+        rect && typeof args.formula_r1c1 === "string" && args.formula_r1c1 !== "" && rectCells(rect) > SNAPSHOT_MAX;
       return {
         address: addr,
         cells: rect ? rectCells(rect) : undefined,
         before,
         after,
         moreRows: rect ? Math.max(0, rectRows(rect) - PREVIEW_MAX_ROWS) : 0,
+        ...(bigFill ? { note: "Too large to snapshot — this fill cannot be reverted." } : {}),
       };
     },
   },

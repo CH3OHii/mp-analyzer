@@ -13,6 +13,16 @@ export function apiSupported(): boolean {
   }
 }
 
+/** Runtime gate for APIs newer than the manifest's 1.9 baseline
+ *  (e.g. pivot filters need 1.12, pivot source read-back needs 1.15). */
+export function apiSupportedAtLeast(version: string): boolean {
+  try {
+    return Office.context.requirements.isSetSupported("ExcelApi", version);
+  } catch {
+    return false;
+  }
+}
+
 export async function runExcel<T>(fn: (ctx: Excel.RequestContext) => Promise<T>): Promise<T> {
   if (!hasExcel()) {
     throw new Error("Excel is not available (browser preview) — workbook tools are disabled.");

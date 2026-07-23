@@ -99,6 +99,55 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
           </select>
           <div className="hint">{t.verifyModeHint}</div>
         </div>
+        {s.verifyMode === "full" && (
+          <div className="field">
+            <label>{t.verifierProviderLabel}</label>
+            <select
+              value={s.verifierLlm?.providerId ?? ""}
+              onChange={(e) => {
+                const id = e.target.value as ProviderId | "";
+                if (!id) return updateSettings({ verifierLlm: null });
+                const p = getPreset(id);
+                updateSettings({ verifierLlm: { providerId: id, baseUrl: p.baseUrls[0], model: p.defaultModel } });
+              }}
+            >
+              <option value="">{t.verifierSameAsMain}</option>
+              {PROVIDER_PRESETS.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+            {s.verifierLlm && (
+              <>
+                <label>{t.verifierModelLabel}</label>
+                <input
+                  type="text"
+                  list="verifier-model-suggestions"
+                  value={s.verifierLlm.model}
+                  onChange={(e) => updateSettings({ verifierLlm: { ...s.verifierLlm!, model: e.target.value } })}
+                />
+                <datalist id="verifier-model-suggestions">
+                  {getPreset(s.verifierLlm.providerId).models.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
+                {s.verifierLlm.providerId === "custom" && (
+                  <>
+                    <label>{t.verifierBaseUrl}</label>
+                    <input
+                      type="text"
+                      value={s.verifierLlm.baseUrl}
+                      onChange={(e) => updateSettings({ verifierLlm: { ...s.verifierLlm!, baseUrl: e.target.value } })}
+                    />
+                  </>
+                )}
+                <div className="hint">{t.verifierHint}</div>
+                {!(s.apiKeys[s.verifierLlm.providerId] ?? "") && <div className="hint warn">{t.verifierKeyMissing}</div>}
+              </>
+            )}
+          </div>
+        )}
         <div className="row">
           <div className="field" style={{ flex: 1 }}>
             <label>{t.contextBudget}</label>

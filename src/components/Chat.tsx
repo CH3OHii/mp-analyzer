@@ -64,7 +64,7 @@ export default function Chat() {
           case "tool":
             return <ToolCard key={it.id} card={it.card} isPendingActive={state.pendingCardId === it.id} />;
           case "verify":
-            return <VerifyCard key={it.id} verdict={it.verdict} issues={it.issues} />;
+            return <VerifyCard key={it.id} verdict={it.verdict} issues={it.issues} model={it.model} />;
           case "notice":
             return (
               <div key={it.id} className="notice">

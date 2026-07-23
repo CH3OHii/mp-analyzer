@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rectContains, rectsEqual } from "../src/excel/guards";
+import { quoteSheetName, rectContains, rectsEqual } from "../src/excel/guards";
 
 // (parseA1 comes from the main guards import below — imports are hoisted)
 describe("rectContains / rectsEqual", () => {
@@ -113,5 +113,16 @@ describe("normalizeMatrix", () => {
     expect(rows).toBe(3);
     expect(cols).toBe(3);
     expect(matrix[1]).toEqual([4, null, null]);
+  });
+});
+
+describe("quoteSheetName", () => {
+  it("leaves simple names bare and quotes anything address-ambiguous", () => {
+    expect(quoteSheetName("Data")).toBe("Data");
+    expect(quoteSheetName("Raw_2026")).toBe("Raw_2026");
+    expect(quoteSheetName("Q1 Data")).toBe("'Q1 Data'");
+    expect(quoteSheetName("O'Brien")).toBe("'O''Brien'");
+    // A sheet literally named like a cell ref MUST be quoted or the address grammar misparses.
+    expect(quoteSheetName("A1")).toBe("'A1'");
   });
 });

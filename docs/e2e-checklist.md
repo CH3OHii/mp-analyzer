@@ -137,3 +137,66 @@ month, one full-width digit string (１２３４); sheet `Notes` with free text.
     input per variable; 插入 puts the substituted text in the composer WITHOUT sending;
     a blank variable stays as a literal {月份} token. Edit and two-step delete work;
     templates survive a pane reload (settings localStorage).
+
+## Capability expansion (aggregate / pivots / tables / cross-verifier)
+
+41. ★ **200k-row aggregate** — build a fixture sheet with ~200k rows × 8 cols (ZH headers:
+    品牌/车型/月份/NEV零售…) and ask for 零售 by 品牌 for one month → the agent uses
+    aggregate_range (NOT paged read_range), the numbers match a hand-built pivot of the
+    same data, and the whole scan finishes in seconds (watch for ~1 min on full-sheet
+    10M-cell scans — acceptable, but note the wall time on Mac).
+42. **Aggregate ↔ pivot routing** — ask "why did BEV share drop in June?" (analysis →
+    aggregate_range in conversation) vs "build me a pivot of retail by brand" (artifact →
+    manage_pivot). The model should route correctly without being told the tool name.
+43. ★ **Pivot lifecycle** — create (new sheet auto-added, appears in overview as
+    `pivots:`), describe, add_field, set_aggregation (sum→average), remove_field,
+    refresh after source edit, delete. Revert each editing step LIFO: field edits restore
+    the prior state WITHOUT losing manual styling; create-revert removes the pivot (and
+    the sheet if it was auto-created); delete on a <1.15 host reports not_revertable.
+44. **Pivot teaching errors** — create with a wrong field name → error lists the real
+    header texts; create sourced from a table name works; dest_sheet that doesn't exist
+    reports ItemNotFound (no half-built pivot left behind).
+45. ★ **Big fill honesty** — set_formulas with formula_r1c1 over >20k cells → ALWAYS asks
+    (even with auto-apply on), the preview says it cannot be reverted, the result carries
+    not_revertable, and the step is absent from the revert stack; the audit still checks
+    the top slice. A >1.05M-cell fill is refused. Small fills keep full undo.
+46. **Excel Tables** — manage_table create (headers, style), rename, set_totals on/off,
+    unlist; each reverts (create-revert unlists, unlist-revert recreates minus filter
+    state — disclosed). list shows name (Sheet!Range); overview shows the same.
+47. **Sort both sides of the cap** — sort a <20k-cell range by two keys (asc+desc) →
+    revert restores contents, number formats, and cell styling (fills/fonts; borders
+    excepted — disclosed in the result). Sort a >20k-cell range → hard approval +
+    "cannot be reverted" note, then verify order landed. Table sort within cap works by
+    header name; oversized table sort refuses with a suggestion naming the sheet and the
+    data range (totals row excluded) — following it must sort the RIGHT sheet.
+48. **Filters** — auto_filter values + criterion styles land and revert (criteria
+    cleared); table_filter with a wrong column lists the real columns; clear_filters
+    works for both targets.
+49. ★ **#NAME? fallback loop** — force an unavailable function (e.g. misspell XLOOKUP or
+    test on a host without it) → read-back/audit reports #NAME?, and the repair round
+    rewrites with a compatible alternative instead of retrying the same name.
+50. ★ **Cross-model reviewer** — Settings → verification Full → AI reviewer = a DIFFERENT
+    provider with a saved key (e.g. DeepSeek over Kimi) → after an editing turn the
+    VerifyCard shows "reviewed by <model>"; remove the reviewer's key → notice appears
+    and the review falls back to the primary model (no crash, no silent skip); reviewer
+    settings survive a pane reload. When the reviewer CALL fails (bad base URL), the
+    pass card must NOT carry a "reviewed by" label.
+51. **Duplicate pivot name** — create a pivot named "P1", then ask for another pivot
+    named "P1" on the same sheet → clean duplicate_pivot error, and the ORIGINAL pivot
+    is untouched (still renders, still in manage_pivot list).
+52. **Spaced sheet names** — on a sheet named "Q1 Data": a >20k-cell formula_r1c1 fill
+    completes (no partial first-row write), and a pivot created from an unqualified
+    source range on that sheet resolves correctly (quoted address).
+53. **Revert honesty after a rename** — create a pivot on an auto-created sheet, rename
+    that sheet via manage_sheet, then revert the pivot-creation step. The pivot's host
+    sheet no longer has the recorded name, so the inverse must cleanly no-op (skip) —
+    not throw, and not silently claim success while leaving stray state. Repeat for a
+    conditional-format / merged-range / row-insert step on a since-renamed sheet.
+54. **Pivot restore cleanup parity** — delete a pivot (undo-capturable, i.e. host
+    supports 1.15 source read-back), rename one of its source fields, then revert the
+    delete. The restore-from-config recreate fails on the renamed field; verify no
+    orphan half-built pivot is left on the destination sheet (matches manage_pivot
+    create's own failure cleanup).
+55. **Totals-row audit** — manage_table set_totals on for a table with an error-prone
+    column (e.g. text where a sum is expected) → the turn-end audit/verifier must see
+    and flag the new totals-row error, not silently skip it.

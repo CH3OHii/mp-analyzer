@@ -27,6 +27,13 @@ export function baseSystemPrompt(lang: "en" | "zh"): string {
 6. After a multi-step build, read back a few key cells to verify the result.
 7. Mutations may need user approval. If the user rejects a change with a reason, adapt your approach — do not simply retry.
 8. Destructive operations (sheet delete/clear, row/column delete) — state the consequences before proposing them.
+9. For analysis over more than ~5,000 cells NEVER page through read_range — use aggregate_range (group-by/filters/profile, compact results). read_range is for samples and spot checks.
+10. To add a derived column to a large table, use set_formulas with formula_r1c1 in ONE call — fills above the snapshot cap ask for confirmation and cannot be reverted, so state that when proposing one.
+
+## Modern formulas
+- Prefer XLOOKUP over VLOOKUP; FILTER/UNIQUE/SORT/SORTBY/SEQUENCE for dynamic outputs; LET for readable multi-step formulas; SUMIFS/COUNTIFS for conditional aggregation.
+- If read-back or the audit reports #NAME?, that function does not exist in this host — rewrite with a compatible alternative (XLOOKUP→INDEX/MATCH, FILTER→SUMIFS or helper columns, LET→expanded formula). Do NOT retry the same function name.
+- #SPILL! means the spill range is blocked — clear the blocking cells or move the formula.
 
 ## Precision & verification
 - write_range values must be strictly rectangular — every row the same length. Use null to keep a cell unchanged.

@@ -9,7 +9,7 @@ import { getPreset } from "../llm/providers";
 import { repairToolArgs, validateArgs } from "../llm/toolcallRepair";
 import type { ChatMessage } from "../llm/types";
 import * as chat from "../store/chatStore";
-import { effectiveLlm, getSettings } from "../store/settings";
+import { effectiveLlm, getSettings, resolveVerifier } from "../store/settings";
 import { dedupeRanges, formatAuditForModel, runAudit, type AuditRun, type MutatedRange } from "./audit";
 import { estimateTokens, trimHistory } from "./history";
 import { composeSystemPrompt, webSearchAvailable } from "./systemPrompt";
@@ -144,9 +144,14 @@ export async function runTurn(userText: string): Promise<TurnOutcome> {
             // judge on an empty readback set, or it green-lights known-bad cells.
             const evidence = auditRun ?? (await runAudit(dedupeRanges(mutated)));
             assertNotAborted();
+            // Independent reviewer model when configured (falls back to the
+            // primary; a configured-but-keyless reviewer gets a notice).
+            const verifier = resolveVerifier(settings);
+            if (verifier.fellBackNoKey) chat.addNotice(t.verifierKeyMissing);
+            const verifiedBy = verifier.isCross ? verifier.llm.model : undefined;
             const verdict = await runVerifierPass({
-              llm,
-              quirks,
+              llm: verifier.llm,
+              quirks: getPreset(verifier.providerId).quirks,
               signal: controller.signal,
               userText,
               opsLog,
@@ -157,15 +162,16 @@ export async function runTurn(userText: string): Promise<TurnOutcome> {
               chat.addNotice(t.verifierUnavailable);
               // The deterministic audit DID pass — full mode must not report
               // less than basic mode when only the AI layer is unavailable.
+              // No reviewer label here: the reviewer model never actually reviewed.
               if (auditRun) chat.addVerify("pass", []);
             } else if (verdict.verdict === "issues" && verdict.issues.length) {
-              chat.addVerify("issues", verdict.issues);
+              chat.addVerify("issues", verdict.issues, verifiedBy);
               chat.llmHistory.push({ role: "user", content: buildRepairMessage(verdict) });
               injectedUserMsgs++;
               credits = Math.max(credits, REPAIR_CREDITS);
               continue;
             } else {
-              chat.addVerify("pass", []);
+              chat.addVerify("pass", [], verifiedBy);
             }
           } else if (settings.verifyMode === "basic" && auditRun) {
             chat.addVerify("pass", []);
@@ -234,17 +240,21 @@ export async function runTurn(userText: string): Promise<TurnOutcome> {
           failCard(deep.code, deep.message);
           continue;
         }
-        if (
-          sheetNames &&
-          typeof args.sheet === "string" &&
-          args.sheet !== "" &&
-          tc.function.name !== "manage_sheet" &&
-          !sheetNames.includes(args.sheet)
-        ) {
-          const sug = suggestSheet(args.sheet, sheetNames);
+        // manage_pivot create names its destination via dest_sheet, not sheet —
+        // when given, it must already exist (the tool only creates a NEW sheet
+        // when dest_sheet is omitted) — check both so it gets the same teaching
+        // error as every other tool instead of a raw ItemNotFound.
+        const targetSheet =
+          typeof args.sheet === "string" && args.sheet !== ""
+            ? args.sheet
+            : tc.function.name === "manage_pivot" && typeof args.dest_sheet === "string" && args.dest_sheet !== ""
+              ? args.dest_sheet
+              : null;
+        if (sheetNames && targetSheet && tc.function.name !== "manage_sheet" && !sheetNames.includes(targetSheet)) {
+          const sug = suggestSheet(targetSheet, sheetNames);
           failCard(
             "unknown_sheet",
-            `No sheet named "${args.sheet}"${sug ? ` — did you mean "${sug}"?` : ""}. Sheets: ${sheetNames.join(", ")}`
+            `No sheet named "${targetSheet}"${sug ? ` — did you mean "${sug}"?` : ""}. Sheets: ${sheetNames.join(", ")}`
           );
           continue;
         }

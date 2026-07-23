@@ -157,4 +157,53 @@ describe("deepValidate dispatch", () => {
   it("passes unknown tools through", () => {
     expect(deepValidate("read_range", { range: "A1" }).ok).toBe(true);
   });
+
+  it("aggregate_range: accepts a full well-formed request", () => {
+    const r = deepValidate("aggregate_range", {
+      range: "A1:H100000",
+      group_by: ["品牌"],
+      values: [{ column: "NEV零售", agg: "sum" }],
+      filters: [{ column: "月份", op: "eq", value: "2026-01" }],
+      top_n: 20,
+      sort: "desc",
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it("aggregate_range: rejects bad range, bad agg, bad op, bad top_n, bad sort", () => {
+    expect(deepValidate("aggregate_range", { range: "nope" }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", values: [{ column: "B", agg: "median" }] }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", values: [{ agg: "sum" }] }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", filters: [{ column: "B", op: "like" }] }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", top_n: 0 }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", top_n: 999 }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", sort: "sideways" }).ok).toBe(false);
+    expect(deepValidate("aggregate_range", { range: "A1:B2", group_by: "品牌" }).ok).toBe(false);
+  });
+
+  it("rejects filters whose operator has no usable operand", () => {
+    const f = (filters: unknown) => deepValidate("aggregate_range", { range: "A1:B2", filters }).ok;
+    expect(f([{ column: "A", op: "gt" }])).toBe(false); // comparison with no value
+    expect(f([{ column: "A", op: "ge", value: "not-a-number" }])).toBe(false);
+    expect(f([{ column: "A", op: "contains" }])).toBe(false);
+    expect(f([{ column: "A", op: "eq" }])).toBe(false);
+    expect(f([{ column: "A", op: "in", values: [] }])).toBe(false); // empty in-list matches nothing
+    expect(f([{ column: "A", op: "gt", value: 100 }])).toBe(true);
+    expect(f([{ column: "A", op: "blank" }])).toBe(true);
+  });
+});
+
+describe("size caps reach deepValidate (never ask approval for a known-fail call)", () => {
+  it("rejects r1c1 fills over FILL_MAX before the approval gate", () => {
+    expect(deepValidate("set_formulas", { range: "A1:B1000", formula_r1c1: "=RC[-1]" }).ok).toBe(true);
+    const big = deepValidate("set_formulas", { range: "A1:Z1048576", formula_r1c1: "=RC[-1]" });
+    expect(big.ok).toBe(false);
+    if (!big.ok) expect(big.code).toBe("too_large");
+  });
+
+  it("rejects range sorts over the scan cap", () => {
+    const big = deepValidate("sort_filter", { action: "sort", range: "A1:ZZ1048576", keys: [{ column: "A" }] });
+    expect(big.ok).toBe(false);
+    expect(deepValidate("sort_filter", { action: "sort", range: "A1:H5000", keys: [{ column: "A" }] }).ok).toBe(true);
+  });
 });

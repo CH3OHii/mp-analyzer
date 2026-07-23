@@ -29,6 +29,13 @@ export const en = {
   verifyModeFull: "Full — re-check + AI review",
   verifyModeHint:
     "Basic re-reads every written range for formula errors after the agent finishes. Full adds one extra AI review call per editing turn.",
+  verifierProviderLabel: "AI reviewer model",
+  verifierSameAsMain: "Same as main model",
+  verifierModelLabel: "Reviewer model",
+  verifierBaseUrl: "Reviewer base URL",
+  verifierHint: "An independent model that cross-checks results. Uses the API key saved for that provider in the section below.",
+  verifierKeyMissing: "Reviewer provider has no saved API key — reviewed with the main model instead.",
+  verifiedBy: (m: string) => `reviewed by ${m}`,
   contextBudget: "Context budget (tokens)",
   maxIters: "Max agent steps per turn",
   temperature: "Temperature",
