@@ -281,6 +281,7 @@ body[data-in-office] .panel .head { padding-right: 48px; }
 .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .hint { font-size: 11px; color: var(--text-dim); }
+.hint.warn { color: var(--warn-text); }
 .section-title { font-weight: 700; color: var(--brand-text); font-size: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
 .diag-result { font-family: var(--mono); font-size: 11px; white-space: pre-wrap; background: var(--bg-alt); border-radius: var(--radius-s); padding: 8px; }
 

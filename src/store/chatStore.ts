@@ -37,7 +37,7 @@ export type ChatItem =
   | { kind: "user"; id: number; text: string }
   | { kind: "assistant"; id: number; text: string; reasoning: string; streaming: boolean }
   | { kind: "tool"; id: number; card: ToolCardModel }
-  | { kind: "verify"; id: number; verdict: "pass" | "issues"; issues: VerifyIssue[] }
+  | { kind: "verify"; id: number; verdict: "pass" | "issues"; issues: VerifyIssue[]; model?: string }
   | { kind: "notice"; id: number; text: string }
   | { kind: "error"; id: number; text: string };
 
@@ -171,8 +171,8 @@ export function addNotice(text: string): void {
   notify();
 }
 
-export function addVerify(verdict: "pass" | "issues", issues: VerifyIssue[]): void {
-  state = { ...state, items: [...state.items, { kind: "verify", id: nextId++, verdict, issues }] };
+export function addVerify(verdict: "pass" | "issues", issues: VerifyIssue[], model?: string): void {
+  state = { ...state, items: [...state.items, { kind: "verify", id: nextId++, verdict, issues, ...(model ? { model } : {}) }] };
   notify();
 }
 
