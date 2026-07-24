@@ -106,7 +106,27 @@ Function RunInProject(label, cmdline)
 
   Set bat = fso.CreateTextFile(batPath, True)
   bat.WriteLine "@echo off"
+  bat.WriteLine "title MP Analyzer - " & label
   bat.WriteLine "cd /d """ & projectDir & """"
+  ' Name the step before running it. `npm install` prints nothing while it resolves
+  ' and fetches, so without this the window is anonymous and indistinguishable from
+  ' a hang -- and the two steps that legitimately take minutes (a cold install, a
+  ' first build) are exactly the ones that look broken. Say what is running, that
+  ' slow is normal, and that the window closing itself means success.
+  bat.WriteLine "echo [MP Analyzer] Step: " & label
+  bat.WriteLine "echo Command: " & cmdline
+  bat.WriteLine "echo."
+  bat.WriteLine "echo This can take several minutes on a slow connection, and prints"
+  bat.WriteLine "echo nothing while it works. Leave this window alone -- it closes"
+  bat.WriteLine "echo itself when the step succeeds, and stays open if it fails."
+  bat.WriteLine "echo."
+  ' The certificate step opens a Windows trust dialog that can land BEHIND this
+  ' console, where waiting-for-a-click is indistinguishable from a hang.
+  If label = "certificate install" Then
+    bat.WriteLine "echo Windows will ask to trust a local certificate. If nothing seems"
+    bat.WriteLine "echo to happen, press Alt+Tab -- the dialog may be behind this window."
+    bat.WriteLine "echo."
+  End If
   ' `call` is mandatory: npm is npm.cmd, and one batch file invoking another
   ' WITHOUT `call` transfers control permanently instead of returning. Without it
   ' every line below (the errorlevel check, the message, the pause) is dead code —
@@ -115,6 +135,16 @@ Function RunInProject(label, cmdline)
   bat.WriteLine "if errorlevel 1 ("
   bat.WriteLine "  echo."
   bat.WriteLine "  echo [MP Analyzer] " & label & " failed with exit code %errorlevel%"
+  If cmdline = "npm install" Then
+    ' A stalled or failed install is usually the registry being unreachable rather
+    ' than anything wrong with the project -- the default one is slow to the point
+    ' of hanging from some networks (notably mainland China).
+    bat.WriteLine "  echo."
+    bat.WriteLine "  echo If this timed out or stalled, the npm registry is likely"
+    bat.WriteLine "  echo unreachable from your network. A regional mirror usually fixes it:"
+    bat.WriteLine "  echo     npm config set registry https://registry.npmmirror.com"
+    bat.WriteLine "  echo Then double-click the launcher again."
+  End If
   bat.WriteLine "  pause"
   bat.WriteLine "  exit /b 1"
   bat.WriteLine ")"
