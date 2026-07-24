@@ -2,10 +2,14 @@
 '
 ' First run on a machine it also bootstraps itself (a console window appears so
 ' you can see progress; later runs are silent):
-'   1. npm install                        (if node_modules is missing)
+'   1. npm install                        (if the dependency tree is missing/incomplete)
 '   2. certificate install                (Windows shows a "trust certificate?" dialog — click Yes)
 '   3. add-in registration in the registry (so the ribbon button appears)
+'   4. first build of dist/               (~30s; gitignored, so a fresh clone lacks it)
 ' Then every run: starts the local server hidden and opens Excel.
+'
+' Closing a bootstrap console window mid-step cancels that step. Re-running the
+' launcher picks up where it left off — no cleanup needed.
 '
 ' Requires Node.js 18+ (nodejs.org). Node does NOT need to be on your PATH: a process
 ' launched from Explorer inherits the PATH snapshot Explorer took when it started, so a
@@ -45,7 +49,7 @@ If Not NpmResolves() Then
   env("PATH") = nodeDir & ";" & env("PATH")
 End If
 
-If Not fso.FolderExists(projectDir & "\node_modules") Then
+If Not DepsInstalled() Then
   ret = RunInProject("npm install", "npm install")
   If ret <> 0 Then WScript.Quit ret
 End If
@@ -64,6 +68,15 @@ If Not fso.FileExists(marker) Then
   ret = RunInProject("add-in registration", "npm run sideload:win")
   If ret <> 0 Then WScript.Quit ret
   fso.CreateTextFile(marker, True).Close
+End If
+
+' dist/ is gitignored, so a fresh clone has to build it once. serve.mjs would do
+' that itself, but it runs HIDDEN — Excel opens 800ms later against a server still
+' 30s from ready, and the task pane just fails to load with nothing to read. Build
+' here instead: visible, blocking, and a broken build pauses with its own error.
+If Not fso.FileExists(projectDir & "\dist\index.html") Then
+  ret = RunInProject("first build", "npm run build")
+  If ret <> 0 Then WScript.Quit ret
 End If
 
 sh.Run "cmd /c cd /d """ & projectDir & """ && node scripts\serve.mjs", 0, False
@@ -94,7 +107,11 @@ Function RunInProject(label, cmdline)
   Set bat = fso.CreateTextFile(batPath, True)
   bat.WriteLine "@echo off"
   bat.WriteLine "cd /d """ & projectDir & """"
-  bat.WriteLine cmdline
+  ' `call` is mandatory: npm is npm.cmd, and one batch file invoking another
+  ' WITHOUT `call` transfers control permanently instead of returning. Without it
+  ' every line below (the errorlevel check, the message, the pause) is dead code —
+  ' the window slams shut the instant npm exits and the user never sees the error.
+  bat.WriteLine "call " & cmdline
   bat.WriteLine "if errorlevel 1 ("
   bat.WriteLine "  echo."
   bat.WriteLine "  echo [MP Analyzer] " & label & " failed with exit code %errorlevel%"
@@ -111,6 +128,23 @@ End Function
 
 Function NpmResolves()
   NpmResolves = (sh.Run("cmd /c where npm >nul 2>&1", 0, True) = 0)
+End Function
+
+' An `npm install` that was killed partway — closing its console window is enough —
+' leaves node_modules BEHIND but incomplete, so the folder existing proves nothing.
+' Checking the shims the bootstrap actually invokes is what distinguishes a finished
+' install from an abandoned one; otherwise every later run skips the install, then
+' dies on the first missing tool. npm install is idempotent, so re-running costs
+' seconds when the tree is already complete.
+Function DepsInstalled()
+  Dim bin, needed, n
+  bin = projectDir & "\node_modules\.bin\"
+  needed = Array("office-addin-dev-certs.cmd", "office-addin-dev-settings.cmd", "vite.cmd", "tsc.cmd")
+  DepsInstalled = False
+  For Each n In needed
+    If Not fso.FileExists(bin & n) Then Exit Function
+  Next
+  DepsInstalled = True
 End Function
 
 ' Standard install locations, most authoritative first. Covers the official MSI
